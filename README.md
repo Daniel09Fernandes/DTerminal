@@ -49,7 +49,9 @@ Pronto! Agora o terminal se moverá e se adaptará automaticamente sempre que vo
 
 ## 📸 Demonstração
 
-![Demonstração do DTerminal](TerminalDelphi.gif)
+
+<img width="1358" height="722" alt="TerminalDelphi" src="https://github.com/user-attachments/assets/7ffc1a57-4288-44b3-b424-59f89af83c57" />
+
 
 ---
 
