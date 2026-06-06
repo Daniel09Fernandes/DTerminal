@@ -1,5 +1,7 @@
 # DTerminal 🦖
 
+**Alpha Version**
+
 **DTerminal** é um terminal de comandos integrado diretamente à IDE do Delphi. Ele permite que você execute comandos e automatize tarefas sem precisar sair do seu ambiente de desenvolvimento, trazendo total compatibilidade com **WSL (Linux)**, **CMD** e **PowerShell**.
 
 ---
