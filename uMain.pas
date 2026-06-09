@@ -5,7 +5,7 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ComCtrls, System.Generics.Collections, uTerminal,
-  Vcl.Menus,
+  Vcl.Menus, Clipbrd,
   // Componentes e Serviços da IDE (ToolsAPI)
   DesignIntf, ToolsAPI, DockForm, Vcl.ActnList, Vcl.ImgList, System.IniFiles;
 
@@ -20,6 +20,7 @@ type
     PowerShell1: TMenuItem;
     Renomear1: TMenuItem;
     Excluir1: TMenuItem;
+    Copy1: TMenuItem;
     procedure FormShow(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -28,6 +29,8 @@ type
     procedure Excluir1Click(Sender: TObject);
     procedure Renomear1Click(Sender: TObject);
     procedure TabDefaultEnter(Sender: TObject);
+    procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure Copy1Click(Sender: TObject);
   private
     FTerminals: TObjectList<TTerminal>;
     FActivePosition: Integer;
@@ -211,6 +214,15 @@ begin
     ManangerTerminal := nil;
 end;
 
+procedure TManangerTerminal.FormKeyDown(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+  if (ssCtrl in Shift) and (Key = Ord('C')) then
+  begin
+    FTerminals.Items[FActivePosition].RTerm.OnKeyDown(Sender, Key, Shift);
+  end;
+end;
+
 procedure TManangerTerminal.FormShow(Sender: TObject);
 begin
   if FTerminals.Count = 0 then
@@ -241,6 +253,11 @@ begin
     PgTerminal.ActivePage := lNewTab;
     AddTerminal(lNewTab, TTypeTerminal(BtMenu.Tag));
   end;
+end;
+
+procedure TManangerTerminal.Copy1Click(Sender: TObject);
+begin
+  Clipboard.AsText := FTerminals.Items[FActivePosition].RTerm.SelText;
 end;
 
 procedure TManangerTerminal.AddTerminal(ATabParent: TTabSheet; ATypeTerminal: TTypeTerminal);

@@ -214,15 +214,15 @@ var
   VLocalTerminalType: TTypeTerminal;
   VLocalReadPipe, VLocalWritePipe: THandle;
 begin
-  if (Key = Ord('C')) and (ssCtrl in Shift) then
+  if (ssCtrl in Shift) and (Key = Ord('C')) then
   begin
-    Key := 0; 
+    Key := 0;
 
     VLocalTerminalType := FTerminalType;
     VLocalReadPipe     := FReadPipe;
     VLocalWritePipe    := FWritePipe;
 
-    TThread.CreateAnonymousThread(procedure
+    //TThread.CreateAnonymousThread(procedure
     begin
       if VLocalReadPipe <> 0 then 
         CancelIo(VLocalReadPipe); 
@@ -234,10 +234,10 @@ begin
       end;
 
       if VLocalTerminalType <> tWSL then
-      begin
+      begin        
         ShellExecute(0, 'open', 'cmd.exe', '/c taskkill /F /IM ping.exe', nil, SW_HIDE);
       end;
-    end).Start;
+    end;//).Start;
 
     RTerm.Lines.BeginUpdate;
     try
@@ -453,15 +453,6 @@ begin
             end;
           end;
         end;
-
-//        if Idx < StringListLinhas.Count - 1 then
-//        begin
-//          RTerm.SelText := Linha + sLineBreak;
-//        end
-//        else if CleanText.EndsWith(#10) or CleanText.EndsWith(#13) then
-//          RTerm.SelText := Linha + sLineBreak
-//        else
-//          RTerm.SelText := Linha;
 
         if Idx = StringListLinhas.Count - 1 then
           RTerm.SelText := Linha
