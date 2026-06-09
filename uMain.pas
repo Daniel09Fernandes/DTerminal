@@ -21,6 +21,8 @@ type
     Renomear1: TMenuItem;
     Excluir1: TMenuItem;
     Copy1: TMenuItem;
+    Past1: TMenuItem;
+    N1: TMenuItem;
     procedure FormShow(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -31,6 +33,7 @@ type
     procedure TabDefaultEnter(Sender: TObject);
     procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure Copy1Click(Sender: TObject);
+    procedure Past1Click(Sender: TObject);
   private
     FTerminals: TObjectList<TTerminal>;
     FActivePosition: Integer;
@@ -159,6 +162,11 @@ begin
   end;
 end;
 
+procedure TManangerTerminal.Past1Click(Sender: TObject);
+begin
+  SendMessage(ActiveControl.Handle, WM_PASTE, 0, 0);
+end;
+
 procedure TManangerTerminal.Renomear1Click(Sender: TObject);
 var
   BtMenu: TMenuItem;
@@ -169,7 +177,9 @@ begin
     lName := InputBox('Terminal name:','New terminal name','');
     if not lName.Trim.IsEmpty then
       TTabSheet(FTerminals.Items[FActivePosition].Parent).Caption := lName;
-  end;
+  end
+  else
+    ShowMessage('It is not possible to rename the Default Terminal.');
 end;
 
 class procedure TManangerTerminal.FreeMemory;
@@ -315,7 +325,9 @@ begin
   if FActivePosition > 0 then
   begin
     FTerminals.Items[FActivePosition].Parent.Free;
-  end;
+  end
+  else
+    ShowMessage('It is not possible to delete the Default Terminal.');
 end;
 
 function TManangerTerminal.GetEditState: TEditState;

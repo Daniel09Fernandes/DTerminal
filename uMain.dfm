@@ -51,16 +51,23 @@ object ManangerTerminal: TManangerTerminal
       end
     end
     object Renomear1: TMenuItem
-      Caption = 'Renomear'
+      Caption = 'Rename Terminal'
       OnClick = Renomear1Click
     end
     object Excluir1: TMenuItem
-      Caption = 'Excluir'
+      Caption = 'Delete Terminal'
       OnClick = Excluir1Click
+    end
+    object N1: TMenuItem
+      Caption = '-'
     end
     object Copy1: TMenuItem
       Caption = 'Copy'
       OnClick = Copy1Click
+    end
+    object Past1: TMenuItem
+      Caption = 'Paste'
+      OnClick = Past1Click
     end
   end
 end
