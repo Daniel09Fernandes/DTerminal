@@ -2,54 +2,54 @@
 
 **Alpha Version**
 
-**DTerminal** é um terminal de comandos integrado diretamente à IDE do Delphi. Ele permite que você execute comandos e automatize tarefas sem precisar sair do seu ambiente de desenvolvimento, trazendo total compatibilidade com **WSL (Linux)**, **CMD** e **PowerShell**.
+**DTerminal** is a command-line terminal integrated directly into the Delphi IDE. It allows you to execute commands and automate tasks without leaving your development environment, offering full compatibility with **WSL (Linux)**, **CMD**, and **PowerShell**.
 
 ---
 
-## 🚀 Funcionalidades
+## 🚀 Features
 
-* **Integração Nativa:** Funciona como uma janela acoplável (*Dockable Form*) dentro da IDE do Delphi.
-* **Multi-Terminal:** Suporte nativo para WSL, Prompt de Comando (CMD) e PowerShell.
-* **Persistência de Layout:** Mantém-se fixo no seu ambiente tanto em modo de design quanto em modo de debug.
+* **Native Integration:** Works as a dockable window (*Dockable Form*) inside the Delphi IDE.
+* **Multi-Terminal:** Native support for WSL, Command Prompt (CMD), and PowerShell.
+* **Layout Persistence:** Stays pinned to your environment in both design and debug modes.
 
 ---
 
-## 🛠️ Como Instalar e Ativar
+## 🛠️ How to Install and Activate
 
-Para instalar o plugin na sua IDE, siga os passos abaixo:
+To install the plugin in your IDE, follow the steps below:
 
-1. Abra o projeto do pacote `DinosTerminal.dproj` no seu Delphi.
-2. No **Project Manager** (Gerenciador de Projetos), clique com o botão direito sobre o projeto e execute as ações nesta ordem:
+1. Open the package project `DinosTerminal.dproj` in your Delphi.
+2. In the **Project Manager**, right-click the project and execute the actions in this exact order:
    * 🧼 **Clean**
    * 🔨 **Build**
    * ⚡ **Install**
-3. Após a instalação, um novo menu chamado **DinosTools** aparecerá na barra superior da IDE.
-4. Clique em `DinosTools -> DinosTerminal` para abrir a janela do terminal.
+3. After installation, a new menu named **DinosTools** will appear in the top bar of the IDE.
+4. Click `DinosTools -> DinosTerminal` to open the terminal window.
 
 ---
 
-## 📐 Configuração Recomendada de Layout (Docking)
+## 📐 Recommended Layout Setup (Docking)
 
-Como o Delphi gerencia layouts de forma separada para codificação e depuração, siga esta sugestão para que o seu terminal nunca suma da tela:
+Since Delphi manages layouts separately for coding and debugging, follow this suggestion so your terminal never disappears from the screen:
 
-1. **Layout Padrão (Design):**
-   * Abra o terminal pelo menu.
-   * Arraste e **acople (dock)** a janela no local de sua preferência (ex: junto à aba de mensagens inferior).
-   * Vá no menu superior da IDE: `View -> Desktops -> Save Desktop...`
-   * Selecione ou digite **Default Layout** e salve.
+1. **Default Layout (Design):**
+   * Open the terminal from the menu.
+   * Drag and **dock** the window to your preferred location (e.g., next to the bottom Messages tab).
+   * Go to the IDE's top menu: `View -> Desktops -> Save Desktop...`
+   * Select or type **Default Layout** and save.
 
-2. **Layout de Depuração (Debug):**
-   * Inicie o debug de qualquer projeto (**F9**). O layout da IDE vai mudar.
-   * Se o terminal sumir, vá novamente em `DinosTools -> DinosTerminal` (ele abrirá imediatamente).
-   * Posicione e acople o terminal onde deseja que ele fique enquanto você debuga.
-   * Vá no menu superior da IDE: `View -> Desktops -> Save Desktop...`
-   * Selecione ou digite **Debug Layout** e salve.
+2. **Debugging Layout (Debug):**
+   * Start debugging any project (**F9**). The IDE layout will change.
+   * If the terminal disappears, go to `DinosTools -> DinosTerminal` again (it will open instantly).
+   * Position and dock the terminal where you want it to stay while debugging.
+   * Go to the IDE's top menu: `View -> Desktops -> Save Desktop...`
+   * Select or type **Debug Layout** and save.
 
-Pronto! Agora o terminal se moverá e se adaptará automaticamente sempre que você alternar entre codificar e debugar.
+All set! Now the terminal will automatically move and adapt whenever you switch between coding and debugging.
 
 ---
 
-## 📸 Demonstração
+## 📸 Demonstration
 
 
 <img width="1358" height="722" alt="TerminalDelphi" src="https://github.com/user-attachments/assets/7ffc1a57-4288-44b3-b424-59f89af83c57" />
@@ -57,6 +57,6 @@ Pronto! Agora o terminal se moverá e se adaptará automaticamente sempre que vo
 
 ---
 
-## 📄 Licença
+## 📄 License
 
-Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more details.
