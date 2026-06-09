@@ -4,6 +4,9 @@
 
 **DTerminal** is a command-line terminal integrated directly into the Delphi IDE. It allows you to execute commands and automate tasks without leaving your development environment, offering full compatibility with **WSL (Linux)**, **CMD**, and **PowerShell**.
 
+<img width="110" height="132" alt="image" src="https://github.com/user-attachments/assets/eac222ed-648c-4944-98a8-8faa67ebe93b" />
+
+
 ---
 
 ## 🚀 Features
