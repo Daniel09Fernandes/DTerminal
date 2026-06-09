@@ -18,13 +18,19 @@ type
     CMD1: TMenuItem;
     WSL1: TMenuItem;
     PowerShell1: TMenuItem;
+    Renomear1: TMenuItem;
+    Excluir1: TMenuItem;
     procedure FormShow(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure CMD1Click(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure Excluir1Click(Sender: TObject);
+    procedure Renomear1Click(Sender: TObject);
+    procedure TabDefaultEnter(Sender: TObject);
   private
     FTerminals: TObjectList<TTerminal>;
+    FActivePosition: Integer;
     procedure AddTerminal(ATabParent: TTabSheet; ATypeTerminal: TTypeTerminal);
   protected
     { Métodos Obrigatórios da Interface INTACustomDockableForm }
@@ -150,13 +156,26 @@ begin
   end;
 end;
 
+procedure TManangerTerminal.Renomear1Click(Sender: TObject);
+var
+  BtMenu: TMenuItem;
+  lName: string;
+begin
+  if FActivePosition > 0 then
+  begin
+    lName := InputBox('Terminal name:','New terminal name','');
+    if not lName.Trim.IsEmpty then
+      TTabSheet(FTerminals.Items[FActivePosition].Parent).Caption := lName;
+  end;
+end;
+
 class procedure TManangerTerminal.FreeMemory;
 var
   LINTAServices: INTAServices;
 begin
   if Assigned(ManangerTerminal) then
   begin
-     if Supports(BorlandIDEServices, INTAServices, LINTAServices) then
+    if Supports(BorlandIDEServices, INTAServices, LINTAServices) then
     begin
       LINTAServices.UnRegisterDockableForm(ManangerTerminal);
     end;
@@ -215,7 +234,9 @@ begin
     lNewTab := TTabSheet.Create(PgTerminal);
     lNewTab.PageControl := PgTerminal;
     lNewTab.Parent := PgTerminal;
-    lNewTab.Caption := 'Terminal ' + IntToStr(FTerminals.Count + 1);
+    lNewTab.Caption := 'Terminal ' + IntToStr(FTerminals.Count);
+    lNewTab.Tag := (FTerminals.Count);
+    lNewTab.OnEnter := TabDefaultEnter;
 
     PgTerminal.ActivePage := lNewTab;
     AddTerminal(lNewTab, TTypeTerminal(BtMenu.Tag));
@@ -226,7 +247,7 @@ procedure TManangerTerminal.AddTerminal(ATabParent: TTabSheet; ATypeTerminal: TT
 var
   NewTerm: TTerminal;
 begin
-  NewTerm := TTerminal.Create(nil);
+  NewTerm := TTerminal.Create(ATabParent);
   NewTerm.Parent := ATabParent;
   NewTerm.Align := alClient;
   NewTerm.BorderStyle := bsNone;
@@ -270,6 +291,16 @@ begin
   Result := False;
 end;
 
+procedure TManangerTerminal.Excluir1Click(Sender: TObject);
+var
+  BtMenu: TMenuItem;
+begin
+  if FActivePosition > 0 then
+  begin
+    FTerminals.Items[FActivePosition].Parent.Free;
+  end;
+end;
+
 function TManangerTerminal.GetEditState: TEditState;
 begin
   Result := [];
@@ -301,6 +332,12 @@ end;
 
 procedure TManangerTerminal.SaveWindowState(Desktop: TCustomIniFile; const Section: string; IsProject: Boolean);
 begin
+end;
+
+procedure TManangerTerminal.TabDefaultEnter(Sender: TObject);
+begin
+  if (Sender is TTabSheet) then
+    FActivePosition := TTabSheet(Sender).Tag;
 end;
 
 initialization

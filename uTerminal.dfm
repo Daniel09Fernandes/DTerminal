@@ -12,10 +12,10 @@ object Terminal: TTerminal
   Font.Name = 'Segoe UI'
   Font.Style = []
   FormStyle = fsMDIForm
-  OnCreate = FormCreate
   OnDestroy = FormDestroy
+  OnShow = FormShow
   TextHeight = 15
-  object rTerm: TRichEdit
+  object RTerm: TRichEdit
     Left = 0
     Top = 0
     Width = 638
@@ -29,11 +29,10 @@ object Terminal: TTerminal
     ParentFont = False
     PlainText = True
     TabOrder = 0
-    OnKeyDown = rTermKeyDown
-    OnKeyPress = rTermKeyPress
+    OnKeyDown = RTermKeyDown
+    OnKeyPress = RTermKeyPress
   end
   object tmrLoad: TTimer
-    Interval = 1
     OnTimer = tmrLoadTimer
     Left = 400
     Top = 240

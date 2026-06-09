@@ -12,12 +12,12 @@ type
 
   TTerminal = class(TForm)
     tmrLoad: TTimer;
-    rTerm: TRichEdit;
+    RTerm: TRichEdit;
     procedure tmrLoadTimer(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
-    procedure rTermKeyPress(Sender: TObject; var Key: Char);
-    procedure rTermKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
-    procedure FormCreate(Sender: TObject);
+    procedure RTermKeyPress(Sender: TObject; var Key: Char);
+    procedure RTermKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure FormShow(Sender: TObject);
   private
     FWritePipe: THandle;  
     FReadPipe: THandle;   
@@ -55,14 +55,6 @@ implementation
 {$R *.dfm}
 
 { TTerminal }
-
-procedure TTerminal.FormCreate(Sender: TObject);
-begin
-  FHistorico := TStringList.Create;
-  FIdxHistorico := -1;
-  FComandoAtual := '';
-  FInputStartPos := 0;
-end;
 
 procedure TTerminal.EstilizarRichEdit;
 const
@@ -155,7 +147,7 @@ var
 begin
   if (FWritePipe <> 0) and (AData <> '') then
   begin
-    RawBytes := TEncoding.UTF8.GetBytes(AData);
+    RawBytes := TEncoding.ANSI.GetBytes(AData);
     if Length(RawBytes) > 0 then
     begin
       WriteFile(FWritePipe, RawBytes[0], Length(RawBytes), BytesWritten, nil);
@@ -168,14 +160,14 @@ procedure TTerminal.TratarEnter;
 var
   ComandoReal: string;
 begin
-  if rTerm.Lines.Count = 0 then Exit;
+  if RTerm.Lines.Count = 0 then Exit;
 
-  rTerm.SelStart := FInputStartPos;
-  rTerm.SelLength := Length(rTerm.Text);
-  ComandoReal := rTerm.SelText;
+  RTerm.SelStart := FInputStartPos;
+  RTerm.SelLength := Length(RTerm.Text);
+  ComandoReal := RTerm.SelText;
 
-  rTerm.SelStart := Length(rTerm.Text);
-  rTerm.SelLength := 0;
+  RTerm.SelStart := Length(RTerm.Text);
+  RTerm.SelLength := 0;
 
   if not ComandoReal.Trim.IsEmpty then
   begin
@@ -183,11 +175,11 @@ begin
     FIdxHistorico := -1;
   end;
 
-  rTerm.SelAttributes.Color := $00F2F8F8;
-  rTerm.SelAttributes.Style := [];
-  rTerm.SelText := sLineBreak;
+  RTerm.SelAttributes.Color := $00F2F8F8;
+  RTerm.SelAttributes.Style := [];
+//  RTerm.SelText := sLineBreak;
 
-  FInputStartPos := rTerm.SelStart;
+  FInputStartPos := RTerm.SelStart;
 
   case FTerminalType of
     tWSL:        SendToPipe(ComandoReal + #10);   // Linux usa LF puro
@@ -196,13 +188,13 @@ begin
   end;
 end;
 
-procedure TTerminal.rTermKeyPress(Sender: TObject; var Key: Char);
+procedure TTerminal.RTermKeyPress(Sender: TObject; var Key: Char);
 begin
   if not Assigned(FHistorico) then 
     FHistorico := TStringList.Create;
 
   // 1. Impedir que o usuário digite atrás do prompt ativo
-  if rTerm.SelStart < FInputStartPos then
+  if RTerm.SelStart < FInputStartPos then
   begin
     Key := #0;
     Exit;
@@ -215,7 +207,7 @@ begin
   end;
 end;
 
-procedure TTerminal.rTermKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+procedure TTerminal.RTermKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
 var
   ComandoSelecionado: string;
   UltimaLinhaIdx, PromptPos: Integer;
@@ -247,23 +239,23 @@ begin
       end;
     end).Start;
 
-    rTerm.Lines.BeginUpdate;
+    RTerm.Lines.BeginUpdate;
     try
-      rTerm.SelStart := Length(rTerm.Text);
-      rTerm.SelLength := 0;
-      rTerm.SelAttributes.Color := $00F2F8F8;
-      rTerm.SelText := '^C' + sLineBreak;
+      RTerm.SelStart := Length(RTerm.Text);
+      RTerm.SelLength := 0;
+      RTerm.SelAttributes.Color := $00F2F8F8;
+      RTerm.SelText := '^C' + sLineBreak;
     finally
-      rTerm.Lines.EndUpdate;
+      RTerm.Lines.EndUpdate;
     end;
     
-    SendMessage(rTerm.Handle, WM_VSCROLL, SB_BOTTOM, 0);
+    SendMessage(RTerm.Handle, WM_VSCROLL, SB_BOTTOM, 0);
     Exit;
   end;
 
   if (Key = VK_BACK) or (Key = VK_LEFT) then
   begin
-    if rTerm.SelStart <= FInputStartPos then
+    if RTerm.SelStart <= FInputStartPos then
     begin
       Key := 0;
       Exit;
@@ -272,17 +264,17 @@ begin
 
   if Key = VK_DELETE then
   begin
-    if rTerm.SelStart < FInputStartPos then
+    if RTerm.SelStart < FInputStartPos then
     begin
       Key := 0;
       Exit;
     end;
   end;
 
-  if rTerm.SelStart < FInputStartPos then
+  if RTerm.SelStart < FInputStartPos then
   begin
     if not (Key in [VK_UP, VK_DOWN, VK_RIGHT]) then
-      rTerm.SelStart := Length(rTerm.Text);
+      RTerm.SelStart := Length(RTerm.Text);
   end;
 
   if (not Assigned(FHistorico)) or (FHistorico.Count = 0) then Exit;
@@ -298,10 +290,10 @@ begin
     LimparLinhaDigitada;
     ComandoSelecionado := FHistorico[FIdxHistorico];
     
-    rTerm.SelStart := Length(rTerm.Text);
-    rTerm.SelLength := 0;
-    rTerm.SelAttributes.Color := $00FDE98B; 
-    rTerm.SelText := ComandoSelecionado;
+    RTerm.SelStart := Length(RTerm.Text);
+    RTerm.SelLength := 0;
+    RTerm.SelAttributes.Color := $00FDE98B;
+    RTerm.SelText := ComandoSelecionado;
     Exit;
   end;
 
@@ -316,10 +308,10 @@ begin
         LimparLinhaDigitada;
         ComandoSelecionado := FHistorico[FIdxHistorico];
         
-        rTerm.SelStart := Length(rTerm.Text);
-        rTerm.SelLength := 0;
-        rTerm.SelAttributes.Color := $00FDE98B;
-        rTerm.SelText := ComandoSelecionado;
+        RTerm.SelStart := Length(RTerm.Text);
+        RTerm.SelLength := 0;
+        RTerm.SelAttributes.Color := $00FDE98B;
+        RTerm.SelText := ComandoSelecionado;
       end
       else
       begin
@@ -343,7 +335,7 @@ end;
 
 procedure TTerminal.WriteToXTerm(const AText: string);
 var
-  CleanText, UltimoComando, Linha: string;
+  CleanText, UltimoComando, UltimaLinha , Linha: string;
   StringListLinhas: TStringList;
   IsPromptCompleto, IsHeaderLs: Boolean;
 begin
@@ -352,14 +344,36 @@ begin
   CleanText := TRegEx.Replace(CleanText, '\x1B\]0;.*?\x07', '');
   CleanText := TRegEx.Replace(CleanText, '\x1B\]0;.*?\x0A', '');
   CleanText := TRegEx.Replace(CleanText, '\x1B\[[0-9;]*[a-zA-Z]', '');
-  CleanText := CleanText.Replace(#7, ''); 
+  CleanText := CleanText.Replace(#7, '');
+
+  while CleanText.StartsWith(#13) or CleanText.StartsWith(#10) do
+  begin
+    if CleanText.StartsWith(#13#10) then
+      CleanText := Copy(CleanText, 3, MaxInt)
+    else
+      CleanText := Copy(CleanText, 2, MaxInt);
+  end;
+
+  while CleanText.EndsWith(#13) or CleanText.EndsWith(#10) do
+  begin
+    if CleanText.EndsWith(#13#10) then CleanText := Copy(CleanText, 1, Length(CleanText) - 2)
+    else CleanText := Copy(CleanText, 1, Length(CleanText) - 1);
+  end;
 
   if CleanText = '' then Exit;
 
+  UltimaLinha := RTerm.Lines[RTerm.Lines.Count - 1];
+
+  if (FTerminalType in [tPowerShell, tWSL]) then
+  begin
+    if (CleanText.Trim = UltimaLinha.Trim) then Exit;
+  end;
+
   if (FTerminalType <> tWSL) and Assigned(FHistorico) and (FHistorico.Count > 0) then
   begin
-    UltimoComando := FHistorico[FHistorico.Count - 1];
-    if (CleanText.Trim = UltimoComando) or (CleanText.Trim = UltimoComando + #13) then 
+    UltimoComando := FHistorico[FHistorico.Count - 1].Trim;
+    if (CleanText.Trim = UltimoComando) or
+       (CleanText.Trim = UltimoComando + #13) then
       Exit;
   end;
 
@@ -367,23 +381,40 @@ begin
   try
     StringListLinhas.Text := CleanText;
 
-    rTerm.Lines.BeginUpdate;
+    RTerm.Lines.BeginUpdate;
     try
       for var Idx := 0 to StringListLinhas.Count -1 do
       begin
         Linha := StringListLinhas[Idx];
 
+        if Assigned(FHistorico) and (FHistorico.Count > 0) then
+        begin
+          if Linha.Trim = FHistorico[FHistorico.Count - 1].Trim then
+            Continue;
+        end;
+
+        if RTerm.Lines.Count > 0 then
+          UltimaLinha := RTerm.Lines[RTerm.Lines.Count - 1].Trim
+        else
+          UltimaLinha := '';
+
+        if (Linha.Trim <> '') and (Linha.Trim = UltimaLinha) then
+          Continue;
+
         if Linha.Trim = '' then
         begin
-          rTerm.SelStart := Length(rTerm.Text);
-          rTerm.SelLength := 0;
-          rTerm.SelAttributes.Color := $00F2F8F8;
-          rTerm.SelText := sLineBreak;
+         if (RTerm.Lines.Count > 0) and (RTerm.Lines[RTerm.Lines.Count - 1].Trim = '') then
+            Continue;
+
+          RTerm.SelStart := Length(RTerm.Text);
+          RTerm.SelLength := 0;
+          RTerm.SelAttributes.Color := $00F2F8F8;
+          //RTerm.SelText := sLineBreak;
           Continue;
         end;
 
-        rTerm.SelStart := Length(rTerm.Text);
-        rTerm.SelLength := 0;
+        RTerm.SelStart := Length(RTerm.Text);
+        RTerm.SelLength := 0;
 
         case FTerminalType of
           tWSL:
@@ -392,13 +423,13 @@ begin
             
             if IsPromptCompleto then
             begin
-              rTerm.SelAttributes.Color := $007BFA50; // Verde Dracula (#50fa7b)
-              rTerm.SelAttributes.Style := [fsBold];
+              RTerm.SelAttributes.Color := $007BFA50; // Verde Dracula (#50fa7b)
+              RTerm.SelAttributes.Style := [fsBold];
             end
             else
             begin
-              rTerm.SelAttributes.Color := $00F2F8F8; 
-              rTerm.SelAttributes.Style := [];
+              RTerm.SelAttributes.Color := $00F2F8F8;
+              RTerm.SelAttributes.Style := [];
             end;
           end;
 
@@ -412,34 +443,44 @@ begin
 
             if IsPromptCompleto or IsHeaderLs then
             begin
-              rTerm.SelAttributes.Color := $00F993BD; // Roxo Dracula (#bd93f9)
-              rTerm.SelAttributes.Style := [fsBold];
+              RTerm.SelAttributes.Color := $00F993BD; // Roxo Dracula (#bd93f9)
+              RTerm.SelAttributes.Style := [fsBold];
             end
             else
             begin
-              rTerm.SelAttributes.Color := $00FDE98B; // Ciano/Azul Dados (#8be9fd)
-              rTerm.SelAttributes.Style := [];
+              RTerm.SelAttributes.Color := $00FDE98B; // Ciano/Azul Dados (#8be9fd)
+              RTerm.SelAttributes.Style := [];
             end;
           end;
         end;
 
-        if Idx < StringListLinhas.Count - 1 then
-          rTerm.SelText := Linha + sLineBreak
-        else if CleanText.EndsWith(#10) or CleanText.EndsWith(#13) then
-          rTerm.SelText := Linha + sLineBreak
+//        if Idx < StringListLinhas.Count - 1 then
+//        begin
+//          RTerm.SelText := Linha + sLineBreak;
+//        end
+//        else if CleanText.EndsWith(#10) or CleanText.EndsWith(#13) then
+//          RTerm.SelText := Linha + sLineBreak
+//        else
+//          RTerm.SelText := Linha;
+
+        if Idx = StringListLinhas.Count - 1 then
+          RTerm.SelText := Linha
         else
-          rTerm.SelText := Linha;
+          RTerm.SelText := Linha + sLineBreak;
+
       end;
     finally
-      rTerm.Lines.EndUpdate;
+      RTerm.Lines.EndUpdate;
     end;
 
   finally
     StringListLinhas.Free;
   end;
   
-  SendMessage(rTerm.Handle, WM_VSCROLL, SB_BOTTOM, 0);
-  FInputStartPos := rTerm.SelStart;
+  SendMessage(RTerm.Handle, WM_VSCROLL, SB_BOTTOM, 0);
+  RTerm.SelStart := Length(RTerm.Text)-1;
+  RTerm.SelLength := 0;
+  FInputStartPos := RTerm.SelStart;
 end;
 
 procedure TTerminal.FormDestroy(Sender: TObject);
@@ -456,6 +497,14 @@ begin
   if FWritePipe <> 0 then CloseHandle(FWritePipe);
 end;
 
+procedure TTerminal.FormShow(Sender: TObject);
+begin
+  FHistorico := TStringList.Create;
+  FIdxHistorico := -1;
+  FComandoAtual := '';
+  FInputStartPos := 0;
+end;
+
 { TReaderThread }
 
 constructor TReaderThread.Create(AReadPipe: THandle; AForm: TTerminal);
@@ -469,28 +518,44 @@ end;
 procedure TReaderThread.Execute;
 var
   Buffer: array[0..4095] of AnsiChar;
-  BytesRead: DWORD;
-  TextOut: string;
+  BytesRead, TotalBytesAvail, BytesLeftThisMessage: DWORD;
+  TextOut, LastTextOut: string;
 begin
+  LastTextOut := '';
+
   while not Terminated do
   begin
-    if ReadFile(FReadPipe, Buffer, SizeOf(Buffer) - 1, BytesRead, nil) then
+    if PeekNamedPipe(FReadPipe, nil, 0, nil, @TotalBytesAvail, nil) then
     begin
-      if BytesRead > 0 then
+      if TotalBytesAvail > 0 then
       begin
-        Buffer[BytesRead] := #0;
-        TextOut := UTF8ToString(Buffer);
-
-        TThread.Queue(nil, procedure
+        if ReadFile(FReadPipe, Buffer, SizeOf(Buffer) - 1, BytesRead, nil) then
         begin
-          FForm.WriteToXTerm(TextOut);
-        end);
-      end;
-    end
-    else
-      Exit;
+          if BytesRead > 0 then
+          begin
+            Buffer[BytesRead] := #0;
+            TextOut := AnsiToUtf8(Buffer);
 
-    Sleep(10);
+            if (TextOut <> LastTextOut) or (FForm.TerminalType = tCMD) then
+            begin
+              LastTextOut := TextOut;
+
+              TThread.Queue(nil, procedure
+              begin
+                FForm.WriteToXTerm(TextOut);
+              end);
+            end;
+          end;
+        end
+        else
+        begin
+          Self.Terminate;
+          Break;
+        end;
+      end;
+    end;
+
+    Sleep(500);
   end;
 end;
 

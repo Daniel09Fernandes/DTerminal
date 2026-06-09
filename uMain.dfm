@@ -25,7 +25,8 @@ object ManangerTerminal: TManangerTerminal
     PopupMenu = PopTerminal
     TabOrder = 0
     object TabDefault: TTabSheet
-      Caption = 'Terminal Default'
+      Caption = 'Default Terminal'
+      OnEnter = TabDefaultEnter
     end
   end
   object PopTerminal: TPopupMenu
@@ -47,6 +48,14 @@ object ManangerTerminal: TManangerTerminal
         Caption = 'PowerShell'
         OnClick = CMD1Click
       end
+    end
+    object Renomear1: TMenuItem
+      Caption = 'Renomear'
+      OnClick = Renomear1Click
+    end
+    object Excluir1: TMenuItem
+      Caption = 'Excluir'
+      OnClick = Excluir1Click
     end
   end
 end
