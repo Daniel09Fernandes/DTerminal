@@ -144,10 +144,25 @@ procedure TTerminal.SendToPipe(const AData: string);
 var
   BytesWritten: DWORD;
   RawBytes: TBytes;
+  LEncoding: TEncoding;
 begin
   if (FWritePipe <> 0) and (AData <> '') then
   begin
-    RawBytes := TEncoding.ANSI.GetBytes(AData);
+    if FTerminalType = tWSL then
+    begin
+      LEncoding := TEncoding.UTF8;
+      RawBytes := LEncoding.GetBytes(AData);
+    end
+    else
+    begin
+      LEncoding := TEncoding.GetEncoding(GetOEMCP);
+      try
+        RawBytes := LEncoding.GetBytes(AData);
+      finally
+        LEncoding.Free;
+      end;
+    end;
+
     if Length(RawBytes) > 0 then
     begin
       WriteFile(FWritePipe, RawBytes[0], Length(RawBytes), BytesWritten, nil);
@@ -343,7 +358,7 @@ begin
 
   CleanText := TRegEx.Replace(CleanText, '\x1B\]0;.*?\x07', '');
   CleanText := TRegEx.Replace(CleanText, '\x1B\]0;.*?\x0A', '');
-  CleanText := TRegEx.Replace(CleanText, '\x1B\[[0-9;]*[a-zA-Z]', '');
+  CleanText := TRegEx.Replace(CleanText, '\x1B\[\??[0-9;]*[a-zA-Z]', '');
   CleanText := CleanText.Replace(#7, '');
 
   while CleanText.StartsWith(#13) or CleanText.StartsWith(#10) do
@@ -369,11 +384,12 @@ begin
     if (CleanText.Trim = UltimaLinha.Trim) then Exit;
   end;
 
-  if (FTerminalType <> tWSL) and Assigned(FHistorico) and (FHistorico.Count > 0) then
+  if Assigned(FHistorico) and (FHistorico.Count > 0) then
   begin
     UltimoComando := FHistorico[FHistorico.Count - 1].Trim;
     if (CleanText.Trim = UltimoComando) or
-       (CleanText.Trim = UltimoComando + #13) then
+       (CleanText.Trim = UltimoComando + #13) or
+       (CleanText.Trim = UltimoComando + #10) then
       Exit;
   end;
 
@@ -469,7 +485,7 @@ begin
   end;
   
   SendMessage(RTerm.Handle, WM_VSCROLL, SB_BOTTOM, 0);
-  RTerm.SelStart := Length(RTerm.Text)-1;
+  RTerm.SelStart := Length(RTerm.Text);
   RTerm.SelLength := 0;
   FInputStartPos := RTerm.SelStart;
 end;
@@ -508,9 +524,11 @@ end;
 
 procedure TReaderThread.Execute;
 var
-  Buffer: array[0..4095] of AnsiChar;
+  Buffer: array[0..4095] of Byte;
   BytesRead, TotalBytesAvail, BytesLeftThisMessage: DWORD;
   TextOut, LastTextOut: string;
+  Bytes: TBytes;
+  LEncoding: TEncoding;
 begin
   LastTextOut := '';
 
@@ -520,12 +538,27 @@ begin
     begin
       if TotalBytesAvail > 0 then
       begin
-        if ReadFile(FReadPipe, Buffer, SizeOf(Buffer) - 1, BytesRead, nil) then
+        if ReadFile(FReadPipe, Buffer[0], SizeOf(Buffer), BytesRead, nil) then
         begin
           if BytesRead > 0 then
           begin
-            Buffer[BytesRead] := #0;
-            TextOut := AnsiToUtf8(Buffer);
+            SetLength(Bytes, BytesRead);
+            Move(Buffer[0], Bytes[0], BytesRead);
+
+            if FForm.TerminalType = tWSL then
+            begin
+              LEncoding := TEncoding.UTF8;
+              TextOut := LEncoding.GetString(Bytes);
+            end
+            else
+            begin
+              LEncoding := TEncoding.GetEncoding(GetOEMCP);
+              try
+                TextOut := LEncoding.GetString(Bytes);
+              finally
+                LEncoding.Free;
+              end;
+            end;
 
             if (TextOut <> LastTextOut) or (FForm.TerminalType = tCMD) then
             begin
