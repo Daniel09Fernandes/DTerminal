@@ -13,7 +13,6 @@ object ManangerTerminal: TManangerTerminal
   OnClose = FormClose
   OnCreate = FormCreate
   OnDestroy = FormDestroy
-  OnKeyDown = FormKeyDown
   OnShow = FormShow
   TextHeight = 15
   object PgTerminal: TPageControl
@@ -25,6 +24,7 @@ object ManangerTerminal: TManangerTerminal
     Align = alClient
     PopupMenu = PopTerminal
     TabOrder = 0
+    TabStop = False
     object TabDefault: TTabSheet
       Caption = 'Default Terminal'
       OnEnter = TabDefaultEnter

@@ -161,13 +161,24 @@
         <DCCReference Include="rtl.dcp"/>
         <DCCReference Include="vcl.dcp"/>
         <DCCReference Include="designide.dcp"/>
-        <DCCReference Include="uTerminal.pas">
-            <Form>Terminal</Form>
-        </DCCReference>
         <DCCReference Include="uMain.pas">
             <Form>ManangerTerminal</Form>
         </DCCReference>
         <DCCReference Include="uRegister.pas"/>
+        <DCCReference Include="WinAPI.ConPty.pas"/>
+        <DCCReference Include="Dinos.Terminal.Pty.pas"/>
+        <DCCReference Include="Dinos.Terminal.ConPtyReader.pas"/>
+        <DCCReference Include="Dinos.Terminal.ConPtyShell.pas"/>
+        <DCCReference Include="Dinos.Terminal.ScreenBuffer.pas"/>
+        <DCCReference Include="Dinos.Terminal.VTParser.pas"/>
+        <DCCReference Include="Dinos.Terminal.TerminalView.pas"/>
+        <DCCReference Include="Dinos.Terminal.KeyInput.pas"/>
+        <DCCReference Include="Dinos.Terminal.CmdShell.pas"/>
+        <DCCReference Include="Dinos.Terminal.Frame.pas">
+            <Form>TerminalFrame</Form>
+            <DesignClass>TFrame</DesignClass>
+        </DCCReference>
+        <DCCReference Include="Dinos.Terminal.Debug.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

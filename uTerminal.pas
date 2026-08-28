@@ -28,11 +28,14 @@ type
     FHistorico: TStringList;
     FIdxHistorico: Integer;
     FComandoAtual: string;
+    FTerminalID: Integer;
 
     procedure SendToPipe(const AData: string);
     procedure EstilizarRichEdit;
     procedure LimparLinhaDigitada;
     procedure TratarEnter;
+    procedure TrocarProcesso(const ANovoComando: string);
+
   public
     procedure WriteToXTerm(const AText: string);
     procedure StartTerminalProcess(const ACommand: string);
@@ -88,7 +91,7 @@ begin
   EstilizarRichEdit;
 
   case TerminalType of
-    tWSL:        StartTerminalProcess('wsl.exe -e /bin/bash -il');
+    tWSL:        StartTerminalProcess(Format('wsl.exe -e bash -c "echo $$ > /tmp/dinos_pid_%d; exec bash -il"', [FTerminalID]));
     tCMD:        StartTerminalProcess('cmd.exe /Q /K');
     tPowerShell: StartTerminalProcess('powershell.exe -NoLogo');
   end;
@@ -192,9 +195,15 @@ begin
 
   RTerm.SelAttributes.Color := $00F2F8F8;
   RTerm.SelAttributes.Style := [];
-//  RTerm.SelText := sLineBreak;
+  RTerm.SelText := sLineBreak;
 
   FInputStartPos := RTerm.SelStart;
+
+  if ComandoReal.Trim.ToLower = 'opencode' then
+  begin
+    TrocarProcesso('opencode.exe');
+    Exit;
+  end;
 
   case FTerminalType of
     tWSL:        SendToPipe(ComandoReal + #10);   // Linux usa LF puro
@@ -203,56 +212,90 @@ begin
   end;
 end;
 
+procedure TTerminal.TrocarProcesso(const ANovoComando: string);
+begin
+  if FProcessInfo.hProcess <> 0 then
+  begin
+    TerminateProcess(FProcessInfo.hProcess, 0);
+    CloseHandle(FProcessInfo.hProcess);
+    CloseHandle(FProcessInfo.hThread);
+    FProcessInfo.hProcess := 0;
+    FProcessInfo.hThread := 0;
+  end;
+  if FReadPipe <> 0 then begin CloseHandle(FReadPipe); FReadPipe := 0; end;
+  if FWritePipe <> 0 then begin CloseHandle(FWritePipe); FWritePipe := 0; end;
+
+  RTerm.Lines.Clear;
+  FInputStartPos := 0;
+
+  StartTerminalProcess(ANovoComando);
+end;
+
 procedure TTerminal.RTermKeyPress(Sender: TObject; var Key: Char);
 begin
   if not Assigned(FHistorico) then 
     FHistorico := TStringList.Create;
 
-  // 1. Impedir que o usuário digite atrás do prompt ativo
+  // 1. Impedir que o usuï¿½rio digite atrï¿½s do prompt ativo
   if RTerm.SelStart < FInputStartPos then
   begin
     Key := #0;
     Exit;
-  end;
-
-  if Key = #13 then
-  begin
-    Key := #0;
-    TratarEnter;
   end;
 end;
 
 procedure TTerminal.RTermKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
 var
   ComandoSelecionado: string;
-  UltimaLinhaIdx, PromptPos: Integer;
-  VLocalTerminalType: TTypeTerminal;
-  VLocalReadPipe, VLocalWritePipe: THandle;
 begin
+  if Key = VK_RETURN then
+  begin
+    Key := 0;
+    TratarEnter;
+    Exit;
+  end;
+
   if (ssCtrl in Shift) and (Key = Ord('C')) then
   begin
     Key := 0;
 
-    VLocalTerminalType := FTerminalType;
-    VLocalReadPipe     := FReadPipe;
-    VLocalWritePipe    := FWritePipe;
+    LimparLinhaDigitada;
 
-    //TThread.CreateAnonymousThread(procedure
+    if AttachConsole(FProcessInfo.dwProcessId) then
     begin
-      if VLocalReadPipe <> 0 then 
-        CancelIo(VLocalReadPipe); 
-      
-      if VLocalWritePipe <> 0 then
-      begin
-        PurgeComm(VLocalWritePipe, PURGE_TXCLEAR or PURGE_RXCLEAR);
-        CancelIo(VLocalWritePipe);
-      end;
+      try
+        var hConIn := CreateFile('CONIN$', GENERIC_READ or GENERIC_WRITE, FILE_SHARE_READ, nil, OPEN_EXISTING, 0, 0);
+        if hConIn <> INVALID_HANDLE_VALUE then
+        begin
+          try
+            var ir: array[0..1] of TInputRecord;
+            var NumWritten: DWORD;
 
-      if VLocalTerminalType <> tWSL then
-      begin        
-        ShellExecute(0, 'open', 'cmd.exe', '/c taskkill /F /IM ping.exe', nil, SW_HIDE);
+            FillChar(ir, SizeOf(ir), 0);
+
+            ir[0].EventType := KEY_EVENT;
+            ir[0].Event.KeyEvent.bKeyDown := True;
+            ir[0].Event.KeyEvent.wRepeatCount := 1;
+            ir[0].Event.KeyEvent.uChar.UnicodeChar := #3;
+            ir[0].Event.KeyEvent.wVirtualKeyCode := $03;
+            ir[0].Event.KeyEvent.dwControlKeyState := 8;
+
+            ir[1].EventType := KEY_EVENT;
+            ir[1].Event.KeyEvent.bKeyDown := False;
+            ir[1].Event.KeyEvent.wRepeatCount := 1;
+            ir[1].Event.KeyEvent.uChar.UnicodeChar := #3;
+            ir[1].Event.KeyEvent.wVirtualKeyCode := $03;
+            ir[1].Event.KeyEvent.dwControlKeyState := 8;
+
+            WriteConsoleInput(hConIn, ir[0], 2, NumWritten);
+          finally
+            CloseHandle(hConIn);
+          end;
+        end;
+      finally
+        FreeConsole;
       end;
-    end;//).Start;
+    end;
 
     RTerm.Lines.BeginUpdate;
     try
@@ -263,8 +306,9 @@ begin
     finally
       RTerm.Lines.EndUpdate;
     end;
-    
+
     SendMessage(RTerm.Handle, WM_VSCROLL, SB_BOTTOM, 0);
+    FInputStartPos := Length(RTerm.Text);
     Exit;
   end;
 
@@ -454,7 +498,7 @@ begin
             IsPromptCompleto := (Linha.Trim.StartsWith('PS ') and Linha.Contains('>')) or 
                                 (TRegEx.IsMatch(Linha, '^[A-Za-z]:\\') and Linha.Contains('>')); 
                                 
-            IsHeaderLs := Linha.Contains('Diretório:') or Linha.Contains('Diretorio:') or
+            IsHeaderLs := Linha.Contains('Diretï¿½rio:') or Linha.Contains('Diretorio:') or
                           TRegEx.IsMatch(Linha, '^-+\s+-+');
 
             if IsPromptCompleto or IsHeaderLs then
@@ -510,6 +554,7 @@ begin
   FIdxHistorico := -1;
   FComandoAtual := '';
   FInputStartPos := 0;
+  FTerminalID := GetCurrentProcessId + Random(10000);
 end;
 
 { TReaderThread }

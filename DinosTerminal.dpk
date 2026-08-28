@@ -35,8 +35,18 @@ requires
   designide;
 
 contains
-  uTerminal in 'uTerminal.pas' {Terminal},
   uMain in 'uMain.pas' {ManangerTerminal},
-  uRegister in 'uRegister.pas';
+  uRegister in 'uRegister.pas',
+  WinAPI.ConPty in 'WinAPI.ConPty.pas',
+  Dinos.Terminal.Pty in 'Dinos.Terminal.Pty.pas',
+  Dinos.Terminal.ConPtyReader in 'Dinos.Terminal.ConPtyReader.pas',
+  Dinos.Terminal.ConPtyShell in 'Dinos.Terminal.ConPtyShell.pas',
+  Dinos.Terminal.ScreenBuffer in 'Dinos.Terminal.ScreenBuffer.pas',
+  Dinos.Terminal.VTParser in 'Dinos.Terminal.VTParser.pas',
+  Dinos.Terminal.TerminalView in 'Dinos.Terminal.TerminalView.pas',
+  Dinos.Terminal.KeyInput in 'Dinos.Terminal.KeyInput.pas',
+  Dinos.Terminal.CmdShell in 'Dinos.Terminal.CmdShell.pas',
+  Dinos.Terminal.Frame in 'Dinos.Terminal.Frame.pas' {TerminalFrame: TFrame},
+  Dinos.Terminal.Debug in 'Dinos.Terminal.Debug.pas';
 
 end.
