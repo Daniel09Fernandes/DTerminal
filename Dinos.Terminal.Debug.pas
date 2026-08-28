@@ -5,6 +5,8 @@ interface
 uses
   System.Classes, System.SyncObjs, SysUtils;
 
+Var LogTerminalDebugIsActive: Boolean;
+
 procedure Log(const AMsg: string);
 procedure LogException(const AScope: string; E: Exception);
 procedure InstallExceptionHandler;
@@ -23,6 +25,8 @@ procedure Log(const AMsg: string);
 var
   F: TextFile;
 begin
+  if not LogTerminalDebugIsActive then Exit;
+  
   try
     LogLock.Enter;
     try

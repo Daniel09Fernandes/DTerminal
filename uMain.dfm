@@ -69,5 +69,16 @@ object ManangerTerminal: TManangerTerminal
       Caption = 'Paste'
       OnClick = Past1Click
     end
+    object N2: TMenuItem
+      Caption = '-'
+    end
+    object EnableLogs1: TMenuItem
+      Caption = 'Enable Logs'
+      OnClick = EnableLogs1Click
+    end
+    object OpenLogFile1: TMenuItem
+      Caption = 'Open Log File'
+      OnClick = OpenLogFile1Click
+    end
   end
 end

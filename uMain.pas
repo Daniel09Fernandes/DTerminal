@@ -11,7 +11,7 @@ uses
   Dinos.Terminal.Interrupt,
   Dinos.Terminal.Debug,
   DesignIntf, ToolsAPI, DockForm, Vcl.ActnList, Vcl.ImgList, System.IniFiles,
-  Vcl.AppEvnts;
+  Vcl.AppEvnts, ShellAPI;
 
 type
   TTypeTerminal = (tWSL, tCMD, tPowerShell);
@@ -29,6 +29,9 @@ type
     Copy1: TMenuItem;
     Past1: TMenuItem;
     N1: TMenuItem;
+    N2: TMenuItem;
+    EnableLogs1: TMenuItem;
+    OpenLogFile1: TMenuItem;
     procedure FormShow(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -39,6 +42,8 @@ type
     procedure TabDefaultEnter(Sender: TObject);
     procedure Copy1Click(Sender: TObject);
     procedure Past1Click(Sender: TObject);
+    procedure EnableLogs1Click(Sender: TObject);
+    procedure OpenLogFile1Click(Sender: TObject);
   private
     FTerminals: TObjectList<TTerminalFrame>;
     FActivePosition: Integer;
@@ -168,6 +173,14 @@ begin
   end;
 end;
 
+procedure TManangerTerminal.OpenLogFile1Click(Sender: TObject);
+var
+  LogFile: string;
+begin
+  LogFile := System.SysUtils.GetEnvironmentVariable('TEMP') + '\DinosTerminal.log';
+  ShellExecute(0, 'open', PChar(LogFile), nil, nil, SW_SHOWNORMAL);
+end;
+
 procedure TManangerTerminal.Past1Click(Sender: TObject);
 begin
   if FTerminals.Count > 0 then
@@ -206,6 +219,9 @@ end;
 
 procedure TManangerTerminal.FormCreate(Sender: TObject);
 begin
+  //Log in this path %TEMP%\DinosTerminal.log
+  LogTerminalDebugIsActive := False;
+
   FTerminals := TObjectList<TTerminalFrame>.Create(True);
   Self.Name := 'FrmDinosTerminalAssistant';
   FActivePosition := 0;
@@ -423,6 +439,19 @@ end;
 function TManangerTerminal.EditAction(Action: TEditAction): Boolean;
 begin
   Result := False;
+end;
+
+procedure TManangerTerminal.EnableLogs1Click(Sender: TObject);
+const
+  ENABLE_LOG = '✔ Enable Log';
+  DISABLE_LOG = 'Enable Log';
+begin
+  LogTerminalDebugIsActive := not LogTerminalDebugIsActive;
+
+  if LogTerminalDebugIsActive then
+    EnableLogs1.Caption := ENABLE_LOG
+  else
+    EnableLogs1.Caption := DISABLE_LOG;
 end;
 
 procedure TManangerTerminal.Excluir1Click(Sender: TObject);
