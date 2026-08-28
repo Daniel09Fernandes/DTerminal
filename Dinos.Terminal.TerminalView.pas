@@ -15,6 +15,7 @@ type
   end;
 
   TViewSizeChangedEvent = procedure(Sender: TObject; ACols, ARows: Integer) of object;
+  TViewSendDataEvent = procedure(const AData: string) of object;
 
   TTerminalView = class(TCustomControl)
   private
@@ -35,6 +36,8 @@ type
     FAnchorRow: Integer;
     FCurrentCol: Integer;
     FCurrentRow: Integer;
+    FBackBuffer: TBitmap;
+    FOnSendData: TViewSendDataEvent;
     procedure PaintLine(ACanvas: TCanvas; AScreenRow: Integer);
     procedure PaintCursor(ACanvas: TCanvas);
     procedure ResolveCellColors(const ACell: TTerminalCell;
@@ -50,6 +53,7 @@ type
     procedure Paint; override;
     procedure Resize; override;
     procedure WMGetDlgCode(var Msg: TMessage); message WM_GETDLGCODE;
+    procedure WMEraseBkgnd(var Msg: TWMEraseBkgnd); message WM_ERASEBKGND;
     procedure KeyDown(var Key: Word; Shift: TShiftState); override;
     procedure KeyPress(var Key: Char); override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState;
@@ -74,6 +78,7 @@ type
     property OnKeyDownEvent: TKeyEvent read FOnKeyDownEvent write FOnKeyDownEvent;
     property OnKeyPressEvent: TKeyPressEvent read FOnKeyPressEvent write FOnKeyPressEvent;
     property OnViewSizeChanged: TViewSizeChangedEvent read FOnViewSizeChanged write FOnViewSizeChanged;
+    property OnSendData: TViewSendDataEvent read FOnSendData write FOnSendData;
   end;
 
 implementation
@@ -83,7 +88,7 @@ implementation
 class function TTerminalColors.Default: TTerminalColors;
 begin
   Result.Foreground := $00F2F8F8;
-  Result.Background := $00362A28;
+  Result.Background := clBlack;
 end;
 
 function XTermPaletteColor(AIndex: Byte): TColor;
@@ -133,7 +138,7 @@ begin
   inherited Create(AOwner);
   ControlStyle := ControlStyle + [csOpaque, csCaptureMouse];
   FFont := TFont.Create;
-  FFont.Name := 'Consolas';
+  FFont.Name := 'Cascadia Mono';
   FFont.Size := 11;
   FFont.Style := [];
   FColors := TTerminalColors.Default;
@@ -144,11 +149,14 @@ begin
   FAnchorRow := -1;
   FCurrentCol := -1;
   FCurrentRow := -1;
-  DoubleBuffered := True;
+  FBackBuffer := TBitmap.Create;
+  FBackBuffer.PixelFormat := pfDevice;
+  DoubleBuffered := False;
 end;
 
 destructor TTerminalView.Destroy;
 begin
+  FBackBuffer.Free;
   FFont.Free;
   inherited;
 end;
@@ -217,54 +225,13 @@ begin
 end;
 
 procedure TTerminalView.UpdateView;
-var
-  Rows: TArray<Integer>;
-  I, R, DirtyCount: Integer;
-  Rc: TRect;
 begin
   if not Assigned(FBuffer) then Exit;
 
   if FBuffer.AltScreenActive then
     FScrollOffset := 0;
 
-  DirtyCount := 0;
-  for I := 0 to FBuffer.Rows - 1 do
-    if FBuffer.IsRowDirty(I) then
-    begin
-      SetLength(Rows, DirtyCount + 1);
-      Rows[DirtyCount] := I;
-      Inc(DirtyCount);
-    end;
-  FBuffer.ResetDirty;
-
-  R := FBuffer.CursorY;
-  if (R >= 0) and (R < FBuffer.Rows) then
-  begin
-    SetLength(Rows, Length(Rows) + 1);
-    Rows[High(Rows)] := R;
-  end;
-
-  DirtyCount := 0;
-  for I := 0 to High(Rows) do
-    if Rows[I] < VisibleRows then
-      Inc(DirtyCount);
-
-  if DirtyCount > (VisibleRows div 2) then
-  begin
-    Invalidate;
-    Exit;
-  end;
-
-  for I := 0 to High(Rows) do
-  begin
-    R := Rows[I];
-    if (R < 0) or (R >= VisibleRows) then Continue;
-    Rc.Left := 0;
-    Rc.Top := R * FCellHeight;
-    Rc.Right := ClientWidth;
-    Rc.Bottom := Rc.Top + FCellHeight;
-    InvalidateRect(Handle, @Rc, False);
-  end;
+  Invalidate;
 end;
 
 function TTerminalView.MaxScrollOffset: Integer;
@@ -317,21 +284,40 @@ end;
 
 procedure TTerminalView.Paint;
 var
+  W, H: Integer;
   Canvas: TCanvas;
   Row: Integer;
 begin
-  Canvas := Self.Canvas;
+  W := ClientWidth;
+  H := ClientHeight;
+  if (W <= 0) or (H <= 0) then Exit;
+
+  if (FBackBuffer.Width <> W) or (FBackBuffer.Height <> H) then
+  begin
+    FBackBuffer.Width := W;
+    FBackBuffer.Height := H;
+  end;
+
+  Canvas := FBackBuffer.Canvas;
   Canvas.Font.Assign(FFont);
   Canvas.Brush.Color := FColors.Background;
-  Canvas.FillRect(ClientRect);
+  Canvas.FillRect(Rect(0, 0, W, H));
 
-  if not Assigned(FBuffer) then Exit;
+  if Assigned(FBuffer) then
+  begin
+    for Row := 0 to VisibleRows - 1 do
+      PaintLine(Canvas, Row);
 
-  for Row := 0 to VisibleRows - 1 do
-    PaintLine(Canvas, Row);
+    if (FBuffer.CursorVisibility = cvNormal) and (FScrollOffset = 0) then
+      PaintCursor(Canvas);
+  end;
 
-  if (FBuffer.CursorVisibility = cvNormal) and (FScrollOffset = 0) then
-    PaintCursor(Canvas);
+  BitBlt(Self.Canvas.Handle, 0, 0, W, H, Canvas.Handle, 0, 0, SRCCOPY);
+end;
+
+procedure TTerminalView.WMEraseBkgnd(var Msg: TWMEraseBkgnd);
+begin
+  Msg.Result := 1;
 end;
 
 procedure TTerminalView.PaintLine(ACanvas: TCanvas; AScreenRow: Integer);
@@ -662,17 +648,37 @@ end;
 
 procedure TTerminalView.CMDMouseWheel(var Msg: TCMMouseWheel);
 var
-  WheelDelta: Integer;
+  Btn: Integer;
+  X, Y: Integer;
+  P: TPoint;
+  S: string;
   MaxScroll: Integer;
 begin
   if Assigned(FBuffer) and FBuffer.AltScreenActive then
+  begin
+    if FBuffer.MouseEnabled and Assigned(FOnSendData) then
+    begin
+      P := ScreenToClient(Mouse.CursorPos);
+      X := P.X div FCellWidth + 1;
+      Y := P.Y div FCellHeight + 1;
+      if X < 1 then X := 1;
+      if Y < 1 then Y := 1;
+      if Msg.WheelDelta > 0 then
+        Btn := 64
+      else
+        Btn := 65;
+      S := Format(#27'[<%d;%d;%dM', [Btn, X, Y]);
+      FOnSendData(S);
+      Msg.Result := 1;
+      Exit;
+    end;
     Exit;
+  end;
 
   MaxScroll := MaxScrollOffset;
-  WheelDelta := Msg.WheelDelta;
-  if WheelDelta > 0 then
+  if Msg.WheelDelta > 0 then
     FScrollOffset := Min(FScrollOffset + 3, MaxScroll)
-  else if WheelDelta < 0 then
+  else if Msg.WheelDelta < 0 then
     FScrollOffset := Max(FScrollOffset - 3, 0);
   Invalidate;
 end;

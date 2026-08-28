@@ -56,6 +56,23 @@ var
   IsCtrl: Boolean;
   IsShift: Boolean;
   IsAlt: Boolean;
+
+  function ModSuffix: string;
+  begin
+    if Modifiers > 0 then
+      Result := '1;' + IntToStr(Modifiers + 1)
+    else
+      Result := '';
+  end;
+
+  function NumSuffix: string;
+  begin
+    if Modifiers > 0 then
+      Result := ';' + IntToStr(Modifiers + 1)
+    else
+      Result := '';
+  end;
+
 begin
   IsCtrl := ssCtrl in AShift;
   IsShift := ssShift in AShift;
@@ -84,28 +101,28 @@ begin
   end;
 
   case AKey of
-    VK_UP:    Seq := #27'[1;'+IntToStr(Modifiers+1)+'A';
-    VK_DOWN:  Seq := #27'[1;'+IntToStr(Modifiers+1)+'B';
-    VK_RIGHT: Seq := #27'[1;'+IntToStr(Modifiers+1)+'C';
-    VK_LEFT:  Seq := #27'[1;'+IntToStr(Modifiers+1)+'D';
-    VK_HOME:  Seq := #27'[1;'+IntToStr(Modifiers+1)+'H';
-    VKEnd:    Seq := #27'[1;'+IntToStr(Modifiers+1)+'F';
-    VKPrior:  Seq := #27'[5;'+IntToStr(Modifiers+1)+'~';
-    VKNext:   Seq := #27'[6;'+IntToStr(Modifiers+1)+'~';
-    VKInsert: Seq := #27'[2;'+IntToStr(Modifiers+1)+'~';
-    VKDelete: Seq := #27'[3;'+IntToStr(Modifiers+1)+'~';
+    VK_UP:    Seq := #27'['+ModSuffix+'A';
+    VK_DOWN:  Seq := #27'['+ModSuffix+'B';
+    VK_RIGHT: Seq := #27'['+ModSuffix+'C';
+    VK_LEFT:  Seq := #27'['+ModSuffix+'D';
+    VK_HOME:  Seq := #27'['+ModSuffix+'H';
+    VKEnd:    Seq := #27'['+ModSuffix+'F';
+    VKPrior:  Seq := #27'[5'+NumSuffix+'~';
+    VKNext:   Seq := #27'[6'+NumSuffix+'~';
+    VKInsert: Seq := #27'[2'+NumSuffix+'~';
+    VKDelete: Seq := #27'[3'+NumSuffix+'~';
     VK_F1:    Seq := #27'OP';
     VK_F2:    Seq := #27'OQ';
     VK_F3:    Seq := #27'OR';
     VK_F4:    Seq := #27'OS';
-    VK_F5:    Seq := #27'[15;'+IntToStr(Modifiers+1)+'~';
-    VK_F6:    Seq := #27'[17;'+IntToStr(Modifiers+1)+'~';
-    VK_F7:    Seq := #27'[18;'+IntToStr(Modifiers+1)+'~';
-    VK_F8:    Seq := #27'[19;'+IntToStr(Modifiers+1)+'~';
-    VK_F9:    Seq := #27'[20;'+IntToStr(Modifiers+1)+'~';
-    VK_F10:   Seq := #27'[21;'+IntToStr(Modifiers+1)+'~';
-    VK_F11:   Seq := #27'[23;'+IntToStr(Modifiers+1)+'~';
-    VK_F12:   Seq := #27'[24;'+IntToStr(Modifiers+1)+'~';
+    VK_F5:    Seq := #27'[15'+NumSuffix+'~';
+    VK_F6:    Seq := #27'[17'+NumSuffix+'~';
+    VK_F7:    Seq := #27'[18'+NumSuffix+'~';
+    VK_F8:    Seq := #27'[19'+NumSuffix+'~';
+    VK_F9:    Seq := #27'[20'+NumSuffix+'~';
+    VK_F10:   Seq := #27'[21'+NumSuffix+'~';
+    VK_F11:   Seq := #27'[23'+NumSuffix+'~';
+    VK_F12:   Seq := #27'[24'+NumSuffix+'~';
     VK_TAB:
     begin
       if IsCtrl then
@@ -114,12 +131,7 @@ begin
         Exit;
     end;
     VK_BACK:
-    begin
-      if IsCtrl then
-        Seq := #8
-      else
-        Seq := #8;
-    end;
+      Seq := #8;
   else
     Exit;
   end;

@@ -92,6 +92,7 @@ begin
   FView.OnKeyDownEvent := HandleKeyDownEvent;
   FView.OnKeyPressEvent := HandleKeyPressEvent;
   FView.OnViewSizeChanged := HandleViewSizeChanged;
+  FView.OnSendData := HandleSendInput;
 
   FKeyInput := TKeyToVT.Create;
   FKeyInput.OnSendInput := HandleSendInput;

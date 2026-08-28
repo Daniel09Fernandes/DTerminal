@@ -49,6 +49,7 @@ type
     FCursorVisibility: TCursorVisibility;
     FWrapPending: Boolean;
     FAltScreenActive: Boolean;
+    FMouseEnabled: Boolean;
     FDirty: TArray<Boolean>;
     FDirtyAny: Boolean;
     procedure AllocateGrid;
@@ -104,6 +105,7 @@ type
     property CursorVisibility: TCursorVisibility read FCursorVisibility write FCursorVisibility;
     property ScrollbackLines: TList<TArray<TTerminalCell>> read FScrollback;
     property AltScreenActive: Boolean read FAltScreenActive;
+    property MouseEnabled: Boolean read FMouseEnabled write FMouseEnabled;
     property DirtyAny: Boolean read FDirtyAny;
   end;
 
@@ -155,6 +157,7 @@ begin
   FCursorVisibility := cvNormal;
   FWrapPending := False;
   FAltScreenActive := False;
+  FMouseEnabled := False;
   FScrollTop := 0;
   FCols := ACols;
   FRows := ARows;

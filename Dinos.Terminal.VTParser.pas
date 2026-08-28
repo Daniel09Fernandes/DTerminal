@@ -287,6 +287,8 @@ begin
           1048:
             if FinalByte = 'h' then
               FScreen.SaveCursor;
+          1000, 1002, 1003, 1006:
+            FScreen.MouseEnabled := (FinalByte = 'h');
         end;
       end;
     end;
