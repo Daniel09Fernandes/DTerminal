@@ -1,5 +1,8 @@
 # DTerminal 🦖
 
+<img width="200" height="200" alt="image" src="https://github.com/user-attachments/assets/7237022f-4f1c-41f6-aa02-c03e536668b8" />
+
+
 **A full-featured terminal docked inside the Delphi IDE.**
 
 DTerminal is an open-source, design-time Delphi IDE plugin that embeds a real terminal directly into RAD Studio / Delphi. It gives you a native **Command Prompt (CMD)**, **PowerShell**, and **WSL (Linux)** shell without leaving your development environment — with color output, cursor handling, scrolling, copy/paste and command interruption.
