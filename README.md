@@ -33,8 +33,8 @@ It is built on top of the Windows **ConPTY** API, so it renders real VT/ANSI out
 
 ## 🛠️ Requirements
 
-- **Windows 10** (build **18362** or later) / Windows 11 — required by the ConPTY API.
-- **Delphi** (RAD Studio) with VCL and **design-time package** support — tested with the Delphi 12 series; older versions may need minor adjustments.
+- **Windows 10** (build **17763** / 1809 or later) / Windows 11 — ConPTY is used when available. On older Windows, or if ConPTY fails to start, the terminal falls back to redirected pipes (basic CMD/PowerShell still work; full-screen VT apps degrade).
+- **Delphi 10.3** or later (RAD Studio) with VCL and **design-time package** support. Compile and install the package in the same IDE version you will use.
 - **WSL** — only if you want to use the Linux/WSL terminal (optional).
 
 ---
@@ -79,10 +79,11 @@ The package is split into small, focused units under the `Dinos.Terminal.*` and 
 | --- | --- |
 | `uMain.pas` | `TManangerTerminal` — dockable form (`INTACustomDockableForm`) managing tabs and shell processes |
 | `uRegister.pas` | OTA wizard that adds the `DinosTools` menu entry |
-| `WinAPI.ConPty.pas` | Dynamic loading of the ConPTY API (`CreatePseudoConsole`, `ResizePseudoConsole`, ...) with build-number check |
+| `WinAPI.ConPty.pas` | Dynamic loading of the ConPTY API (`CreatePseudoConsole`, `ResizePseudoConsole`, ...) with Windows 1809+ build check |
 | `Dinos.Terminal.Pty.pas` | `TConPty` — pipes + pseudo-console + job object (`KILL_ON_JOB_CLOSE`) + `CreateProcess` wiring |
 | `Dinos.Terminal.ConPtyReader.pas` | Background thread that reads output and decodes UTF-8, keeping partial sequences intact |
 | `Dinos.Terminal.ConPtyShell.pas` | `ITerminalProcess` implementation — lifecycle, resize, interrupt, exit events |
+| `Dinos.Terminal.CmdShell.pas` | Pipe-based `ITerminalProcess` fallback when ConPTY is missing or fails to start |
 | `Dinos.Terminal.ScreenBuffer.pas` | Cell-based screen buffer: colors, styles, scrollback, scroll regions, alt-screen |
 | `Dinos.Terminal.VTParser.pas` | CSI / OSC / SGR / control-character parser driving the screen buffer |
 | `Dinos.Terminal.TerminalView.pas` | Painting control: cell runs, xterm palette, cursor, selection, scrolling |

@@ -47,6 +47,7 @@ contains
   Dinos.Terminal.KeyInput in 'Dinos.Terminal.KeyInput.pas',
   Dinos.Terminal.CmdShell in 'Dinos.Terminal.CmdShell.pas',
   Dinos.Terminal.Frame in 'Dinos.Terminal.Frame.pas' {TerminalFrame: TFrame},
+  Dinos.Terminal.Interrupt in 'Dinos.Terminal.Interrupt.pas',
   Dinos.Terminal.Debug in 'Dinos.Terminal.Debug.pas';
 
 end.
