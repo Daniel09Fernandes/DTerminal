@@ -141,6 +141,8 @@ var
   LPeekText: string;
 begin
   Result := False;
+  LPtyInputRead := 0;
+  LPtyOutputWrite := 0;
   if FIsRunning then
   begin
     Log('TConPty.Start: already running, abort');
@@ -163,113 +165,120 @@ begin
   FInputWrite := INVALID_HANDLE_VALUE;
   FOutputRead := INVALID_HANDLE_VALUE;
 
-  if not CreatePipe(LPtyInputRead, FInputWrite, nil, 0) then
-  begin
-    Log('TConPty.Start: CreatePipe(INPUT) FAILED, GetLastError=' + IntToStr(GetLastError));
-    Exit;
-  end;
-  Log('TConPty.Start: CreatePipe(INPUT) OK, ptyRead=' + IntToStr(LPtyInputRead) + ' inputWrite=' + IntToStr(FInputWrite));
+  try
+    if not CreatePipe(LPtyInputRead, FInputWrite, nil, 0) then
+    begin
+      LPtyInputRead := 0;
+      FInputWrite := INVALID_HANDLE_VALUE;
+      Log('TConPty.Start: CreatePipe(INPUT) FAILED, GetLastError=' + IntToStr(GetLastError));
+      Exit;
+    end;
+    Log('TConPty.Start: CreatePipe(INPUT) OK, ptyRead=' + IntToStr(LPtyInputRead) + ' inputWrite=' + IntToStr(FInputWrite));
 
-  if not CreatePipe(FOutputRead, LPtyOutputWrite, nil, 0) then
-  begin
-    Log('TConPty.Start: CreatePipe(OUTPUT) FAILED, GetLastError=' + IntToStr(GetLastError));
-    CloseHandle(LPtyInputRead);
-    CloseHandle(FInputWrite);
-    FInputWrite := INVALID_HANDLE_VALUE;
-    Exit;
-  end;
-  Log('TConPty.Start: CreatePipe(OUTPUT) OK, outputRead=' + IntToStr(FOutputRead) + ' ptyWrite=' + IntToStr(LPtyOutputWrite));
+    if not CreatePipe(FOutputRead, LPtyOutputWrite, nil, 0) then
+    begin
+      LPtyOutputWrite := 0;
+      FOutputRead := INVALID_HANDLE_VALUE;
+      Log('TConPty.Start: CreatePipe(OUTPUT) FAILED, GetLastError=' + IntToStr(GetLastError));
+      CloseHandle(FInputWrite);
+      FInputWrite := INVALID_HANDLE_VALUE;
+      Exit;
+    end;
+    Log('TConPty.Start: CreatePipe(OUTPUT) OK, outputRead=' + IntToStr(FOutputRead) + ' ptyWrite=' + IntToStr(LPtyOutputWrite));
 
-  LResult := ConPtyAPI.CreatePseudoConsole(FSize, LPtyInputRead, LPtyOutputWrite, 0, FhPC);
-  Log('TConPty.Start: CreatePseudoConsole HR=' + IntToHex(NativeUInt(LResult), 8) + ' hPC=' + IntToStr(FhPC));
+    LResult := ConPtyAPI.CreatePseudoConsole(FSize, LPtyInputRead, LPtyOutputWrite, 0, FhPC);
+    Log('TConPty.Start: CreatePseudoConsole HR=' + IntToHex(NativeUInt(LResult), 8) + ' hPC=' + IntToStr(FhPC));
 
-  CloseHandle(LPtyInputRead);
-  CloseHandle(LPtyOutputWrite);
-  Log('TConPty.Start: closed pty-side handles');
+    if Failed(LResult) then
+    begin
+      Log('TConPty.Start: CreatePseudoConsole FAILED, cleaning up');
+      CloseHandle(FInputWrite);
+      CloseHandle(FOutputRead);
+      FInputWrite := INVALID_HANDLE_VALUE;
+      FOutputRead := INVALID_HANDLE_VALUE;
+      FhPC := 0;
+      Exit;
+    end;
 
-  if Failed(LResult) then
-  begin
-    Log('TConPty.Start: CreatePseudoConsole FAILED, cleaning up');
-    CloseHandle(FInputWrite);
-    CloseHandle(FOutputRead);
-    FInputWrite := INVALID_HANDLE_VALUE;
-    FOutputRead := INVALID_HANDLE_VALUE;
-    FhPC := 0;
-    Exit;
-  end;
+    if not BuildStartupInfo(LSI) then
+    begin
+      Log('TConPty.Start: BuildStartupInfo FAILED, GetLastError=' + IntToStr(GetLastError));
+      Close;
+      Exit;
+    end;
+    Log('TConPty.Start: BuildStartupInfo OK');
 
-  if not BuildStartupInfo(LSI) then
-  begin
-    Log('TConPty.Start: BuildStartupInfo FAILED, GetLastError=' + IntToStr(GetLastError));
-    Close;
-    Exit;
-  end;
-  Log('TConPty.Start: BuildStartupInfo OK');
+    LCmd := ACommandLine;
+    UniqueString(LCmd);
+    if AWorkDir <> '' then
+      LWorkDir := PChar(AWorkDir)
+    else
+      LWorkDir := nil;
 
-  LCmd := ACommandLine;
-  UniqueString(LCmd);
-  if AWorkDir <> '' then
-    LWorkDir := PChar(AWorkDir)
-  else
-    LWorkDir := nil;
-
-  FJob := CreateJobObject(nil, nil);
-  Log('TConPty.Start: CreateJobObject handle=' + IntToStr(FJob));
-  if FJob <> 0 then
-  begin
-    ZeroMemory(@LJobInfo, SizeOf(LJobInfo));
-    LJobInfo.BasicLimitInformation.LimitFlags := JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
-    SetInformationJobObject(FJob, JobObjectExtendedLimitInformation, @LJobInfo, SizeOf(LJobInfo));
-  end;
-
-  Result := CreateProcess(
-    nil,
-    PChar(LCmd),
-    nil, nil,
-    False,
-    EXTENDED_STARTUPINFO_PRESENT or CREATE_SUSPENDED,
-    nil,
-    LWorkDir,
-    LSI.StartupInfo,
-    FProcessInfo
-  );
-
-  LErr := GetLastError;
-  FreeStartupInfo(LSI);
-
-  if Result then
-  begin
-    Log('TConPty.Start: CreateProcess OK, hProcess=' + IntToStr(FProcessInfo.hProcess) + ' hThread=' + IntToStr(FProcessInfo.hThread));
+    FJob := CreateJobObject(nil, nil);
+    Log('TConPty.Start: CreateJobObject handle=' + IntToStr(FJob));
     if FJob <> 0 then
     begin
-      if not AssignProcessToJobObject(FJob, FProcessInfo.hProcess) then
-        Log('TConPty.Start: AssignProcessToJobObject FAILED, GetLastError=' + IntToStr(GetLastError))
-      else
-        Log('TConPty.Start: AssignProcessToJobObject OK');
+      ZeroMemory(@LJobInfo, SizeOf(LJobInfo));
+      LJobInfo.BasicLimitInformation.LimitFlags := JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+      SetInformationJobObject(FJob, JobObjectExtendedLimitInformation, @LJobInfo, SizeOf(LJobInfo));
     end;
-    ResumeThread(FProcessInfo.hThread);
-    Log('TConPty.Start: ResumeThread called, FIsRunning=True');
-    FIsRunning := True;
 
-    Sleep(500);
-    LAlive := GetExitCodeProcess(FProcessInfo.hProcess, LExitCode);
-    Log('TConPty.Start: after 500ms, alive=' + BoolToStr(LAlive, True) + ' exitCode=' + IntToStr(LExitCode));
-    LPipeAvail := 0;
-    LPipeTotal := 0;
-    LPeekRead := 0;
-    SetLength(LBuf, 4096);
-    PeekNamedPipe(FOutputRead, @LBuf[0], Length(LBuf), @LPeekRead, @LPipeAvail, @LPipeTotal);
-    Log('TConPty.Start: after 500ms, peekRead=' + IntToStr(LPeekRead) + ' available=' + IntToStr(LPipeAvail) + ' total=' + IntToStr(LPipeTotal));
-    if LPeekRead > 0 then
+    Result := CreateProcess(
+      nil,
+      PChar(LCmd),
+      nil, nil,
+      False,
+      EXTENDED_STARTUPINFO_PRESENT or CREATE_SUSPENDED,
+      nil,
+      LWorkDir,
+      PStartupInfo(@LSI)^,
+      FProcessInfo
+    );
+
+    LErr := GetLastError;
+    FreeStartupInfo(LSI);
+
+    if Result then
     begin
-      LPeekText := TEncoding.UTF8.GetString(LBuf, 0, LPeekRead);
-      Log('TConPty.Start: after 500ms, peeked=' + IntToStr(LPeekRead) + ' bytes: "' + LPeekText + '"');
+      Log('TConPty.Start: CreateProcess OK, hProcess=' + IntToStr(FProcessInfo.hProcess) + ' hThread=' + IntToStr(FProcessInfo.hThread));
+      if FJob <> 0 then
+      begin
+        if not AssignProcessToJobObject(FJob, FProcessInfo.hProcess) then
+          Log('TConPty.Start: AssignProcessToJobObject FAILED, GetLastError=' + IntToStr(GetLastError))
+        else
+          Log('TConPty.Start: AssignProcessToJobObject OK');
+      end;
+      ResumeThread(FProcessInfo.hThread);
+      Log('TConPty.Start: ResumeThread called, FIsRunning=True');
+      FIsRunning := True;
+
+      Sleep(500);
+      LAlive := GetExitCodeProcess(FProcessInfo.hProcess, LExitCode);
+      Log('TConPty.Start: after 500ms, alive=' + BoolToStr(LAlive, True) + ' exitCode=' + IntToStr(LExitCode));
+      LPipeAvail := 0;
+      LPipeTotal := 0;
+      LPeekRead := 0;
+      SetLength(LBuf, 4096);
+      PeekNamedPipe(FOutputRead, @LBuf[0], Length(LBuf), @LPeekRead, @LPipeAvail, @LPipeTotal);
+      Log('TConPty.Start: after 500ms, peekRead=' + IntToStr(LPeekRead) + ' available=' + IntToStr(LPipeAvail) + ' total=' + IntToStr(LPipeTotal));
+      if LPeekRead > 0 then
+      begin
+        LPeekText := TEncoding.UTF8.GetString(LBuf, 0, LPeekRead);
+        Log('TConPty.Start: after 500ms, peeked=' + IntToStr(LPeekRead) + ' bytes: "' + LPeekText + '"');
+      end;
+    end
+    else
+    begin
+      Log('TConPty.Start: CreateProcess FAILED, GetLastError=' + IntToStr(LErr));
+      Close;
     end;
-  end
-  else
-  begin
-    Log('TConPty.Start: CreateProcess FAILED, GetLastError=' + IntToStr(LErr));
-    Close;
+  finally
+    if LPtyInputRead <> 0 then
+      CloseHandle(LPtyInputRead);
+    if LPtyOutputWrite <> 0 then
+      CloseHandle(LPtyOutputWrite);
+    Log('TConPty.Start: closed pty-side handles');
   end;
 end;
 

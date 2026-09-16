@@ -8,7 +8,7 @@ uses
 const
   PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE = $00020016;
   PSEUDOCONSOLE_INHERIT_CURSOR = $00000001;
-  CONPTY_MIN_BUILD = 18362;
+  CONPTY_MIN_BUILD = 17763;
 
 {$IF not Declared(EXTENDED_STARTUPINFO_PRESENT)}
   EXTENDED_STARTUPINFO_PRESENT = $00080000;
@@ -97,10 +97,26 @@ function SetInformationJobObject(hJob: THandle; JobObjectInfoClass: DWORD; lpJob
 function AssignProcessToJobObject(hJob, hProcess: THandle): BOOL; stdcall; external kernel32 name 'AssignProcessToJobObject';
 {$IFEND}
 
+{$IF not Declared(JobObjectBasicProcessIdList)}
+const
+  JobObjectBasicProcessIdList = 3;
+{$IFEND}
+
+{$IF not Declared(QueryInformationJobObject)}
+function QueryInformationJobObject(hJob: THandle; JobObjectInfoClass: DWORD;
+  lpJobObjectInfo: Pointer; cbJobObjectInfoLength: DWORD;
+  lpReturnLength: PDWORD): BOOL; stdcall; external kernel32 name 'QueryInformationJobObject';
+{$IFEND}
+
 var
   ConPtyAPI: TConPtyAPI;
 
 implementation
+
+{$IF not Declared(NTSTATUS)}
+type
+  NTSTATUS = LongInt;
+{$IFEND}
 
 function RtlGetVersion(lpVersionInformation: pointer): NTSTATUS; stdcall;
   external 'ntdll.dll' name 'RtlGetVersion';
@@ -137,11 +153,13 @@ end;
 function TConPtyAPI.Initialize: Boolean;
 var
   hKernel: HMODULE;
+  LBuild: DWORD;
 begin
   if IsAvailable then
     Exit(True);
 
-  if not ConPtyBuildSupported(GetWindowsBuildNumber) then
+  LBuild := GetWindowsBuildNumber;
+  if (LBuild > 0) and (not ConPtyBuildSupported(LBuild)) then
     Exit(False);
 
   hKernel := GetModuleHandle('kernel32.dll');

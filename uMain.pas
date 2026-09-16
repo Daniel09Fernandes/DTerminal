@@ -7,7 +7,8 @@ uses
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ComCtrls, System.Generics.Collections,
   Vcl.Menus, Clipbrd,
   Dinos.Terminal.Frame, Dinos.Terminal.ScreenBuffer,
-  Dinos.Terminal.ConPtyShell, Dinos.Terminal.Pty,
+  Dinos.Terminal.ConPtyShell, Dinos.Terminal.Pty, Dinos.Terminal.CmdShell,
+  WinAPI.ConPty,
   Dinos.Terminal.Interrupt,
   Dinos.Terminal.Debug,
   DesignIntf, ToolsAPI, DockForm, Vcl.ActnList, Vcl.ImgList, System.IniFiles,
@@ -116,7 +117,6 @@ class procedure TManangerTerminal.New;
 var
   I: Integer;
   FormAntigo: TCustomForm;
-  LINTAServices: INTAServices;
 begin
   FormAntigo := nil;
 
@@ -134,6 +134,8 @@ begin
     try
       FormAntigo.Free;
     except
+      on E: Exception do
+        Log('TManangerTerminal.New: stale form free failed: ' + E.Message);
     end;
     FormAntigo := nil;
     ManangerTerminal := nil;
@@ -153,14 +155,6 @@ begin
         ManangerTerminal.ManualFloat(Rect(150, 150, 650, 500));
       end;
 
-      if Supports(BorlandIDEServices, INTAServices, LINTAServices) then
-      begin
-        try
-          LINTAServices.RegisterDockableForm(ManangerTerminal);
-        except
-        end;
-      end;
-
       ManangerTerminal.ForceShow;
       ManangerTerminal.Visible := True;
       ManangerTerminal.Show;
@@ -169,6 +163,8 @@ begin
       if ManangerTerminal.Enabled then
         ManangerTerminal.SetFocus;
     except
+      on E: Exception do
+        Log('TManangerTerminal.New: ' + E.ClassName + ': ' + E.Message);
     end;
   end;
 end;
@@ -363,10 +359,10 @@ begin
     StartProcessForFrame(NewFrame, ATypeTerminal);
     Sleep(100);
   except
-    on E:Exception do
+    on E: Exception do
     begin
-        Log('Falhou no StartProcessForFrame: '+ E.Message);
-        raise;
+      Log('Falhou no StartProcessForFrame: ' + E.Message);
+      NewFrame.FeedData(#13#10 + 'Failed to start terminal: ' + E.Message + #13#10);
     end;
   end;
 
@@ -378,6 +374,7 @@ var
   CmdLine: string;
   Shell: ITerminalProcess;
   Size: TTerminalSize;
+  UsedConPty: Boolean;
 begin
   case ATypeTerminal of
     tWSL:        CmdLine := 'wsl.exe';
@@ -387,24 +384,43 @@ begin
 
   Log('StartProcessForFrame: ' + CmdLine);
 
-  try
-    Shell := TConPtyShell.Create;
-    Size.Cols := 120;
-    Size.Rows := 40;
+  Size.Cols := 120;
+  Size.Rows := 40;
+  Shell := nil;
+  UsedConPty := False;
 
+  if ConPtyAPI.Initialize then
+  begin
+    try
+      Shell := TConPtyShell.Create;
+      AFrame.SetProcess(Shell);
+      Shell.Start(CmdLine, Size);
+      UsedConPty := True;
+      Log('StartProcessForFrame: ConPTY session started');
+    except
+      on E: Exception do
+      begin
+        Log('StartProcessForFrame: ConPTY failed, fallback to pipes: ' + E.ClassName + ': ' + E.Message);
+        Shell := nil;
+        AFrame.SetProcess(nil);
+      end;
+    end;
+  end
+  else
+    Log('StartProcessForFrame: ConPTY not available, using pipe fallback');
+
+  if not UsedConPty then
+  begin
+    Shell := TCmdShellProcess.Create;
     AFrame.SetProcess(Shell);
     Shell.Start(CmdLine, Size);
-    AFrame.ResizeProcessToView;
-    FActiveProcess := Shell;
-    InstallInterruptHook;
-    Log('StartProcessForFrame done');
-  except
-    on E: Exception do
-    begin
-      Log('StartProcessForFrame EXCEPTION: ' + E.ClassName + ': ' + E.Message);
-      raise;
-    end;
+    Log('StartProcessForFrame: pipe fallback started');
   end;
+
+  AFrame.ResizeProcessToView;
+  FActiveProcess := Shell;
+  InstallInterruptHook;
+  Log('StartProcessForFrame done');
 end;
 
 function TManangerTerminal.GetCaption: string;
