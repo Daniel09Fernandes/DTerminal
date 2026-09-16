@@ -58,6 +58,7 @@ type
     procedure DoInterrupt;
     procedure UpdateStatus;
     function GetTerminalTypeName(ATypeTerminal: TTypeTerminal): string;
+    function GetActiveProjectDirectory: string;
   protected
     function GetCaption: string;
     function GetIdentifier: string;
@@ -287,10 +288,14 @@ begin
 end;
 
 procedure TManangerTerminal.FormShow(Sender: TObject);
+var
+  I: Integer;
 begin
   InstallInterruptHook;
   if FTerminals.Count = 0 then
     AddTerminal(TabDefault, tCMD);
+  for I := 0 to FTerminals.Count - 1 do
+    FTerminals[I].ResizeProcessToView;
   UpdateStatus;
 end;
 
@@ -369,12 +374,31 @@ begin
   UpdateStatus;
 end;
 
+function TManangerTerminal.GetActiveProjectDirectory: string;
+var
+  ModuleServices: IOTAModuleServices;
+  Project: IOTAProject;
+begin
+  Result := '';
+  if not Supports(BorlandIDEServices, IOTAModuleServices, ModuleServices) then
+    Exit;
+  Project := ModuleServices.GetActiveProject;
+  if not Assigned(Project) then
+    Exit;
+  if Project.FileName = '' then
+    Exit;
+  Result := ExcludeTrailingPathDelimiter(ExtractFilePath(Project.FileName));
+  if (Result <> '') and not DirectoryExists(Result) then
+    Result := '';
+end;
+
 procedure TManangerTerminal.StartProcessForFrame(AFrame: TTerminalFrame; ATypeTerminal: TTypeTerminal);
 var
   CmdLine: string;
   Shell: ITerminalProcess;
   Size: TTerminalSize;
   UsedConPty: Boolean;
+  WorkDir: string;
 begin
   case ATypeTerminal of
     tWSL:        CmdLine := 'wsl.exe';
@@ -382,10 +406,10 @@ begin
     tPowerShell: CmdLine := 'powershell.exe -NoLogo';
   end;
 
-  Log('StartProcessForFrame: ' + CmdLine);
+  WorkDir := GetActiveProjectDirectory;
+  Log('StartProcessForFrame: ' + CmdLine + ' workdir="' + WorkDir + '"');
 
-  Size.Cols := 120;
-  Size.Rows := 40;
+  Size := AFrame.CurrentTerminalSize;
   Shell := nil;
   UsedConPty := False;
 
@@ -394,7 +418,7 @@ begin
     try
       Shell := TConPtyShell.Create;
       AFrame.SetProcess(Shell);
-      Shell.Start(CmdLine, Size);
+      Shell.Start(CmdLine, WorkDir, Size);
       UsedConPty := True;
       Log('StartProcessForFrame: ConPTY session started');
     except
@@ -413,7 +437,7 @@ begin
   begin
     Shell := TCmdShellProcess.Create;
     AFrame.SetProcess(Shell);
-    Shell.Start(CmdLine, Size);
+    Shell.Start(CmdLine, WorkDir, Size);
     Log('StartProcessForFrame: pipe fallback started');
   end;
 

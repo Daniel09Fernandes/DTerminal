@@ -46,7 +46,7 @@ const
 implementation
 
 uses
-  System.SysUtils, Dinos.Terminal.Debug;
+  System.SysUtils, Dinos.Terminal.Debug, Dinos.Terminal.ProcessEnv;
 
 constructor TConPty.Create;
 begin
@@ -129,6 +129,10 @@ var
   LSI: TStartupInfoExW;
   LCmd: string;
   LWorkDir: PChar;
+  LWorkDirStr: string;
+  LEnvBlock: string;
+  LEnv: Pointer;
+  LFlags: DWORD;
   LResult: HRESULT;
   LJobInfo: TJobObjectExtendedLimitInformation;
   LErr: DWORD;
@@ -210,8 +214,10 @@ begin
 
     LCmd := ACommandLine;
     UniqueString(LCmd);
-    if AWorkDir <> '' then
-      LWorkDir := PChar(AWorkDir)
+    LWorkDirStr := AWorkDir;
+    UniqueString(LWorkDirStr);
+    if LWorkDirStr <> '' then
+      LWorkDir := PChar(LWorkDirStr)
     else
       LWorkDir := nil;
 
@@ -224,13 +230,23 @@ begin
       SetInformationJobObject(FJob, JobObjectExtendedLimitInformation, @LJobInfo, SizeOf(LJobInfo));
     end;
 
+    LFlags := EXTENDED_STARTUPINFO_PRESENT or CREATE_SUSPENDED;
+    LEnv := nil;
+    LEnvBlock := CreateUserEnvironmentBlock;
+    UniqueString(LEnvBlock);
+    if LEnvBlock <> '' then
+    begin
+      LEnv := PChar(LEnvBlock);
+      LFlags := LFlags or CREATE_UNICODE_ENVIRONMENT;
+    end;
+
     Result := CreateProcess(
       nil,
       PChar(LCmd),
       nil, nil,
       False,
-      EXTENDED_STARTUPINFO_PRESENT or CREATE_SUSPENDED,
-      nil,
+      LFlags,
+      LEnv,
       LWorkDir,
       PStartupInfo(@LSI)^,
       FProcessInfo

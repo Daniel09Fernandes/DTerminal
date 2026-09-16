@@ -46,6 +46,7 @@ type
     function CellRect(ACol, AScreenRow: Integer): TRect;
     function StreamTop: Integer;
     function MaxScrollOffset: Integer;
+    function AltOrigin: Integer;
     function ResolveCell(AScreenRow, ACol: Integer): TTerminalCell;
     function CellColAt(X: Integer): Integer;
     function CellRowAt(Y: Integer): Integer;
@@ -227,26 +228,38 @@ end;
 procedure TTerminalView.UpdateView;
 begin
   if not Assigned(FBuffer) then Exit;
-
-  if FBuffer.AltScreenActive then
-    FScrollOffset := 0;
-
+  if FScrollOffset > MaxScrollOffset then
+    FScrollOffset := MaxScrollOffset;
   Invalidate;
 end;
 
 function TTerminalView.MaxScrollOffset: Integer;
 begin
-  if Assigned(FBuffer) and FBuffer.AltScreenActive then
-    Result := 0
-  else if Assigned(FBuffer) then
-    Result := FBuffer.ScrollbackLines.Count + FBuffer.CursorY
+  Result := 0;
+  if not Assigned(FBuffer) then Exit;
+  if FBuffer.AltScreenActive then
+    Result := Max(0, FBuffer.Rows - VisibleRows)
   else
-    Result := 0;
+    Result := Max(0, FBuffer.ScrollbackLines.Count + FBuffer.Rows - 1);
 end;
 
 function TTerminalView.StreamTop: Integer;
 begin
   Result := MaxScrollOffset - (VisibleRows - 1) - FScrollOffset;
+  if Result < 0 then
+    Result := 0;
+end;
+
+function TTerminalView.AltOrigin: Integer;
+var
+  MaxOrigin: Integer;
+begin
+  Result := 0;
+  if not Assigned(FBuffer) then Exit;
+  MaxOrigin := FBuffer.Rows - VisibleRows;
+  if MaxOrigin < 0 then
+    MaxOrigin := 0;
+  Result := MaxOrigin - FScrollOffset;
   if Result < 0 then
     Result := 0;
 end;
@@ -260,9 +273,10 @@ begin
 
   if FBuffer.AltScreenActive then
   begin
-    if (AScreenRow >= 0) and (AScreenRow < FBuffer.Rows) and
+    RB := AScreenRow + AltOrigin;
+    if (RB >= 0) and (RB < FBuffer.Rows) and
        (ACol >= 0) and (ACol < FBuffer.Cols) then
-      Result := FBuffer.Cells[ACol, AScreenRow];
+      Result := FBuffer.Cells[ACol, RB];
     Exit;
   end;
 
@@ -395,8 +409,13 @@ begin
   if not Assigned(FBuffer) then Exit;
   if (FBuffer.CursorX < 0) or (FBuffer.CursorX >= VisibleCols) then Exit;
 
-  CursorStream := FBuffer.ScrollbackLines.Count + FBuffer.CursorY;
-  ScreenRow := CursorStream - StreamTop;
+  if FBuffer.AltScreenActive then
+    ScreenRow := FBuffer.CursorY - AltOrigin
+  else
+  begin
+    CursorStream := FBuffer.ScrollbackLines.Count + FBuffer.CursorY;
+    ScreenRow := CursorStream - StreamTop;
+  end;
   if (ScreenRow < 0) or (ScreenRow >= VisibleRows) then Exit;
 
   CursorRect := CellRect(FBuffer.CursorX, ScreenRow);
@@ -626,14 +645,6 @@ procedure TTerminalView.WMVScroll(var Msg: TWMVScroll);
 var
   MaxScroll: Integer;
 begin
-  if Assigned(FBuffer) and FBuffer.AltScreenActive then
-  begin
-    case Msg.ScrollCode of
-      SB_BOTTOM: FScrollOffset := 0;
-    end;
-    Exit;
-  end;
-
   MaxScroll := MaxScrollOffset;
   case Msg.ScrollCode of
     SB_LINEUP: FScrollOffset := Min(FScrollOffset + 1, MaxScroll);
@@ -642,6 +653,7 @@ begin
     SB_PAGEDOWN: FScrollOffset := Max(FScrollOffset - VisibleRows, 0);
     SB_THUMBTRACK, SB_THUMBPOSITION: FScrollOffset := Max(0, Min(Msg.Pos, MaxScroll));
     SB_BOTTOM: FScrollOffset := 0;
+    SB_TOP: FScrollOffset := MaxScroll;
   end;
   Invalidate;
 end;
@@ -654,24 +666,21 @@ var
   S: string;
   MaxScroll: Integer;
 begin
-  if Assigned(FBuffer) and FBuffer.AltScreenActive then
+  if Assigned(FBuffer) and FBuffer.AltScreenActive and FBuffer.MouseEnabled and
+     Assigned(FOnSendData) then
   begin
-    if FBuffer.MouseEnabled and Assigned(FOnSendData) then
-    begin
-      P := ScreenToClient(Mouse.CursorPos);
-      X := P.X div FCellWidth + 1;
-      Y := P.Y div FCellHeight + 1;
-      if X < 1 then X := 1;
-      if Y < 1 then Y := 1;
-      if Msg.WheelDelta > 0 then
-        Btn := 64
-      else
-        Btn := 65;
-      S := Format(#27'[<%d;%d;%dM', [Btn, X, Y]);
-      FOnSendData(S);
-      Msg.Result := 1;
-      Exit;
-    end;
+    P := ScreenToClient(Mouse.CursorPos);
+    X := P.X div FCellWidth + 1;
+    Y := P.Y div FCellHeight + 1;
+    if X < 1 then X := 1;
+    if Y < 1 then Y := 1;
+    if Msg.WheelDelta > 0 then
+      Btn := 64
+    else
+      Btn := 65;
+    S := Format(#27'[<%d;%d;%dM', [Btn, X, Y]);
+    FOnSendData(S);
+    Msg.Result := 1;
     Exit;
   end;
 
@@ -681,6 +690,7 @@ begin
   else if Msg.WheelDelta < 0 then
     FScrollOffset := Max(FScrollOffset - 3, 0);
   Invalidate;
+  Msg.Result := 1;
 end;
 
 end.

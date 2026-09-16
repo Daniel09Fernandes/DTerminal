@@ -5,7 +5,7 @@ interface
 uses
   Winapi.Windows, System.SysUtils, System.Classes,
   Dinos.Terminal.Pty, Dinos.Terminal.ConPtyShell, Dinos.Terminal.ConPtyReader,
-  Dinos.Terminal.Debug;
+  Dinos.Terminal.Debug, Dinos.Terminal.ProcessEnv;
 
 type
   TCmdShellProcess = class(TInterfacedObject, ITerminalProcess)
@@ -20,7 +20,7 @@ type
     FActive: Boolean;
     FExited: Boolean;
     FTerminating: Boolean;
-    procedure InternalStart(const ACommand: string);
+    procedure InternalStart(const ACommand, AWorkDir: string);
     procedure HandleReaderExit;
     procedure HandleChildExit;
     procedure DoChildExit;
@@ -32,7 +32,7 @@ type
   public
     constructor Create;
     destructor Destroy; override;
-    procedure Start(const ACommand: string; const ASize: TTerminalSize);
+    procedure Start(const ACommand, AWorkDir: string; const ASize: TTerminalSize);
     procedure WriteInput(const AData: string);
     procedure SendInterrupt;
     procedure Resize(const ASize: TTerminalSize);
@@ -94,13 +94,18 @@ begin
   inherited;
 end;
 
-procedure TCmdShellProcess.InternalStart(const ACommand: string);
+procedure TCmdShellProcess.InternalStart(const ACommand, AWorkDir: string);
 var
   SA: TSecurityAttributes;
   SI: TStartupInfo;
   ChildStdInRead, ChildStdOutWrite: THandle;
   CmdLine: string;
   LErr: DWORD;
+  LFlags: DWORD;
+  LEnvBlock: string;
+  LEnv: Pointer;
+  LWorkDir: PChar;
+  LWorkDirStr: string;
 begin
   SA.nLength := SizeOf(SA);
   SA.bInheritHandle := True;
@@ -138,8 +143,25 @@ begin
     CmdLine := 'cmd.exe';
   UniqueString(CmdLine);
 
+  LWorkDirStr := AWorkDir;
+  UniqueString(LWorkDirStr);
+  if LWorkDirStr <> '' then
+    LWorkDir := PChar(LWorkDirStr)
+  else
+    LWorkDir := nil;
+
+  LFlags := CREATE_NO_WINDOW;
+  LEnv := nil;
+  LEnvBlock := CreateUserEnvironmentBlock;
+  UniqueString(LEnvBlock);
+  if LEnvBlock <> '' then
+  begin
+    LEnv := PChar(LEnvBlock);
+    LFlags := LFlags or CREATE_UNICODE_ENVIRONMENT;
+  end;
+
   if not CreateProcess(nil, PChar(CmdLine), nil, nil, True,
-    CREATE_NO_WINDOW, nil, nil, SI, FProcess) then
+    LFlags, LEnv, LWorkDir, SI, FProcess) then
   begin
     LErr := GetLastError;
     CloseHandle(ChildStdInRead);
@@ -160,15 +182,15 @@ begin
     IntToStr(FProcess.hProcess));
 end;
 
-procedure TCmdShellProcess.Start(const ACommand: string; const ASize: TTerminalSize);
+procedure TCmdShellProcess.Start(const ACommand, AWorkDir: string; const ASize: TTerminalSize);
 begin
-  Log('TCmdShellProcess.Start: "' + ACommand + '"');
+  Log('TCmdShellProcess.Start: "' + ACommand + '" workdir="' + AWorkDir + '"');
   if FActive then
     Exit;
   FTerminating := False;
   FExited := False;
 
-  InternalStart(ACommand);
+  InternalStart(ACommand, AWorkDir);
 
   FReader := TConPtyReader.Create(FOutputRead);
   FReader.OnOutput := FOnOutput;

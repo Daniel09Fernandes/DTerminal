@@ -33,7 +33,9 @@ type
     procedure HandleProcessTerminated;
     procedure HandleViewSizeChanged(Sender: TObject; ACols, ARows: Integer);
     procedure ApplyProcessSize;
+    procedure ApplyVisibleSize;
     procedure LayoutView;
+    function IsTuiMode: Boolean;
     function IsShellPromptAtCursor: Boolean;
     procedure StartLocalInput;
     procedure AppendLocalChar(const ACh: Char);
@@ -49,6 +51,7 @@ type
     procedure CancelInput;
     procedure SetProcess(AProcess: ITerminalProcess);
     procedure ResizeProcessToView;
+    function CurrentTerminalSize: TTerminalSize;
     procedure FocusView;
     property Screen: TScreenBuffer read FScreen;
     property View: TTerminalView read FView;
@@ -68,8 +71,8 @@ uses
   Math;
 
 const
-  MinBufferCols = 120;
-  MinBufferRows = 40;
+  DefaultBufferCols = 80;
+  DefaultBufferRows = 24;
 
 constructor TTerminalFrame.Create(AOwner: TComponent);
 begin
@@ -77,22 +80,21 @@ begin
   Width := 800;
   Height := 600;
 
-  FScreen := TScreenBuffer.Create(80, 24);
-  FLastSize.Cols := 120;
-  FLastSize.Rows := 40;
-  FScreen.Resize(FLastSize.Cols, FLastSize.Rows);
+  FScreen := TScreenBuffer.Create(DefaultBufferCols, DefaultBufferRows);
+  FLastSize.Cols := DefaultBufferCols;
+  FLastSize.Rows := DefaultBufferRows;
 
   FParser := TVTParser.Create(FScreen);
   FParser.OnTitleChanged := HandleTitleChanged;
 
   FView := TTerminalView.Create(Self);
-  FView.Parent := Self;
-  FView.Align := alClient;
-  FView.AssignScreen(FScreen);
   FView.OnKeyDownEvent := HandleKeyDownEvent;
   FView.OnKeyPressEvent := HandleKeyPressEvent;
   FView.OnViewSizeChanged := HandleViewSizeChanged;
   FView.OnSendData := HandleSendInput;
+  FView.Parent := Self;
+  FView.Align := alClient;
+  FView.AssignScreen(FScreen);
 
   FKeyInput := TKeyToVT.Create;
   FKeyInput.OnSendInput := HandleSendInput;
@@ -180,29 +182,43 @@ begin
     FProcess.Resize(FLastSize);
 end;
 
+procedure TTerminalFrame.ApplyVisibleSize;
+var
+  Cols, Rows: Integer;
+begin
+  Cols := FView.VisibleCols;
+  Rows := FView.VisibleRows;
+  if Cols <= 0 then
+    Cols := DefaultBufferCols;
+  if Rows <= 0 then
+    Rows := DefaultBufferRows;
+  FLastSize.Cols := Cols;
+  FLastSize.Rows := Rows;
+  FScreen.Resize(FLastSize.Cols, FLastSize.Rows);
+end;
+
+function TTerminalFrame.CurrentTerminalSize: TTerminalSize;
+begin
+  ApplyVisibleSize;
+  Result := FLastSize;
+end;
+
+function TTerminalFrame.IsTuiMode: Boolean;
+begin
+  Result := Assigned(FScreen) and FScreen.AltScreenActive;
+end;
+
 procedure TTerminalFrame.HandleViewSizeChanged(Sender: TObject; ACols, ARows: Integer);
 begin
   CancelLocalInput;
-  FLastSize.Cols := ACols;
-  FLastSize.Rows := ARows;
-  if FLastSize.Rows < MinBufferRows then
-    FLastSize.Rows := MinBufferRows;
-  if FLastSize.Cols < MinBufferCols then
-    FLastSize.Cols := MinBufferCols;
-  FScreen.Resize(FLastSize.Cols, FLastSize.Rows);
+  ApplyVisibleSize;
   ApplyProcessSize;
 end;
 
 procedure TTerminalFrame.ResizeProcessToView;
 begin
   CancelLocalInput;
-  FLastSize.Cols := FView.VisibleCols;
-  FLastSize.Rows := FView.VisibleRows;
-  if FLastSize.Rows < MinBufferRows then
-    FLastSize.Rows := MinBufferRows;
-  if FLastSize.Cols < MinBufferCols then
-    FLastSize.Cols := MinBufferCols;
-  FScreen.Resize(FLastSize.Cols, FLastSize.Rows);
+  ApplyVisibleSize;
   ApplyProcessSize;
 end;
 
@@ -235,7 +251,7 @@ begin
     else
       Exit;
   end
-  else if Key = VK_BACK then
+  else if (not IsTuiMode) and (Key = VK_BACK) then
   begin
     if IsShellPromptAtCursor then
     begin
@@ -273,7 +289,7 @@ begin
     end;
     CancelLocalInput;
   end
-  else if Key >= #32 then
+  else if (not IsTuiMode) and (Key >= #32) then
   begin
     if IsShellPromptAtCursor then
     begin
@@ -297,6 +313,7 @@ var
 begin
   Result := False;
   if not Assigned(FScreen) then Exit;
+  if IsTuiMode then Exit;
   Y := FScreen.CursorY;
   X := FScreen.CursorX;
   if (Y < 0) or (Y >= FScreen.Rows) then Exit;

@@ -63,6 +63,7 @@ type
     procedure Clear;
     procedure ClearToEndOfLine;
     procedure ClearToStartOfLine;
+    procedure ClearEntireLine;
     procedure ClearToEndOfScreen;
     procedure ClearToStartOfScreen;
     procedure ClearEntireScreen;
@@ -82,6 +83,7 @@ type
     procedure Backspace;
     procedure CarriageReturn;
     procedure LineFeed;
+    procedure ReverseIndex;
     procedure Tab;
     procedure SaveCursor;
     procedure RestoreCursor;
@@ -268,6 +270,7 @@ var
 begin
   for I := FCursorX to FCols - 1 do
     SetCell(I, FCursorY, TTerminalCell.DefaultCell);
+  FWrapPending := False;
 end;
 
 procedure TScreenBuffer.ClearToStartOfLine;
@@ -276,6 +279,16 @@ var
 begin
   for I := 0 to FCursorX do
     SetCell(I, FCursorY, TTerminalCell.DefaultCell);
+  FWrapPending := False;
+end;
+
+procedure TScreenBuffer.ClearEntireLine;
+var
+  I: Integer;
+begin
+  for I := 0 to FCols - 1 do
+    SetCell(I, FCursorY, TTerminalCell.DefaultCell);
+  FWrapPending := False;
 end;
 
 procedure TScreenBuffer.ClearToEndOfScreen;
@@ -524,6 +537,7 @@ procedure TScreenBuffer.SetCursorPos(ACol, ARow: Integer);
 begin
   FCursorX := Min(Max(ACol, 0), FCols - 1);
   FCursorY := Min(Max(ARow, 0), FRows - 1);
+  FWrapPending := False;
 end;
 
 procedure TScreenBuffer.SetCursorXY(AX, AY: Integer);
@@ -534,25 +548,30 @@ end;
 procedure TScreenBuffer.MoveCursorUp(ALines: Integer);
 begin
   FCursorY := Max(FCursorY - ALines, FScrollTop);
+  FWrapPending := False;
 end;
 
 procedure TScreenBuffer.MoveCursorDown(ALines: Integer);
 begin
   FCursorY := Min(FCursorY + ALines, FScrollBottom);
+  FWrapPending := False;
 end;
 
 procedure TScreenBuffer.MoveCursorForward(ALines: Integer);
 begin
   FCursorX := Min(FCursorX + ALines, FCols - 1);
+  FWrapPending := False;
 end;
 
 procedure TScreenBuffer.MoveCursorBackward(ALines: Integer);
 begin
   FCursorX := Max(FCursorX - ALines, 0);
+  FWrapPending := False;
 end;
 
 procedure TScreenBuffer.Backspace;
 begin
+  FWrapPending := False;
   if FCursorX > 0 then
   begin
     Dec(FCursorX);
@@ -563,6 +582,7 @@ end;
 procedure TScreenBuffer.CarriageReturn;
 begin
   FCursorX := 0;
+  FWrapPending := False;
 end;
 
 procedure TScreenBuffer.LineFeed;
@@ -571,6 +591,15 @@ begin
     ScrollUp(1)
   else
     Inc(FCursorY);
+end;
+
+procedure TScreenBuffer.ReverseIndex;
+begin
+  FWrapPending := False;
+  if FCursorY <= FScrollTop then
+    ScrollDown(1)
+  else
+    Dec(FCursorY);
 end;
 
 procedure TScreenBuffer.Tab;

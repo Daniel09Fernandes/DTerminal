@@ -5,7 +5,9 @@
 
 **A full-featured terminal docked inside the Delphi IDE.**
 
-DTerminal is an open-source, design-time Delphi IDE plugin that embeds a real terminal directly into RAD Studio / Delphi. It gives you a native **Command Prompt (CMD)**, **PowerShell**, and **WSL (Linux)** shell without leaving your development environment — with color output, cursor handling, scrolling, copy/paste and command interruption.
+DTerminal is an open-source, design-time Delphi IDE plugin that embeds a real terminal directly into RAD Studio / Delphi. It runs on **Delphi 10.3 (Rio) and later**. It gives you a native **Command Prompt (CMD)**, **PowerShell**, and **WSL (Linux)** shell without leaving your development environment — with color output, cursor handling, scrolling, copy/paste and command interruption.
+
+Shells see your current user PATH, so **AI agent CLIs** such as Cursor (`agent` / `cursor-agent`), OpenCode and similar tools work from the project folder, just like in a normal terminal.
 
 It is built on top of the Windows **ConPTY** API, so it renders real VT/ANSI output through a custom screen buffer and VT parser.
 ---
@@ -19,6 +21,8 @@ It is built on top of the Windows **ConPTY** API, so it renders real VT/ANSI out
 
 ## ✨ Features
 
+- **Delphi 10.3+** — design-time package for RAD Studio / Delphi **10.3 (Rio)** and later. Compile and install it in the same IDE version you will use.
+- **AI agent CLIs** — Cursor (`agent` / `cursor-agent`), OpenCode and other user-installed agent CLIs are on the shell PATH and start in the active project folder.
 - **Dockable inside the IDE** — registers as a dockable form via the Open Tools API, persists across Design and Debug layouts.
 - **Multi-terminal tabs** — open as many CMD, PowerShell or WSL shells as you want, each in its own tab.
 - **True VT rendering** — SGR colors (16/256/RGB), bold/italic/underline/inverse, cursor positioning, scroll regions, alternative screen buffer and OSC window titles.
@@ -28,14 +32,28 @@ It is built on top of the Windows **ConPTY** API, so it renders real VT/ANSI out
 - **History** — arrow-up/down navigation on the input line (CMD/PowerShell/WSL shells provide their own history as well).
 - **Window titles** — OSC `0;title` sequences update the tab caption.
 - **Solid engine** — UTF-8 aware reader, partial multibyte sequence handling, unicode-tolerant pipes, job objects to guarantee children are killed on close.
+- **User PATH** — shells use the current user/machine PATH from the registry (expanded, including tools under `%LOCALAPPDATA%`), not the stale IDE process PATH.
+- **Project directory** — new terminals open in the active Delphi project folder.
+
+---
+
+## AI agent CLIs
+
+DTerminal is compatible with AI agent command-line tools installed for your Windows user — for example **Cursor** (`agent` / `cursor-agent`), **OpenCode**, and other CLIs that live on the user PATH (often under `%LOCALAPPDATA%`).
+
+- The shell does **not** inherit the stale PATH from the Delphi IDE process. It rebuilds PATH from the current user and machine environment, so tools you installed after opening the IDE still resolve.
+- A new tab starts in the **active Delphi project folder**, so the agent works on the code you have open.
+- ConPTY plus the VT renderer support interactive CLIs (colors, cursor, TUI). If ConPTY is unavailable, the pipe fallback still runs basic commands; full-screen TUIs may degrade.
+- DTerminal does **not** install the agent. Install the CLI yourself and make sure it is on the Windows user PATH.
 
 ---
 
 ## 🛠️ Requirements
 
+- **Delphi 10.3 (Rio) or later** (RAD Studio) with VCL and **design-time package** support. Compile and install the package in the **same IDE version** you will use.
 - **Windows 10** (build **17763** / 1809 or later) / Windows 11 — ConPTY is used when available. On older Windows, or if ConPTY fails to start, the terminal falls back to redirected pipes (basic CMD/PowerShell still work; full-screen VT apps degrade).
-- **Delphi 10.3** or later (RAD Studio) with VCL and **design-time package** support. Compile and install the package in the same IDE version you will use.
 - **WSL** — only if you want to use the Linux/WSL terminal (optional).
+- **AI agent CLIs** (optional) — install Cursor, OpenCode or another agent CLI on your user PATH if you want to run them from the docked terminal.
 
 ---
 
@@ -54,9 +72,20 @@ It is built on top of the Windows **ConPTY** API, so it renders real VT/ANSI out
 ## 🚀 Usage
 
 ### Opening a shell
-- The first tab opens **CMD** automatically.
+- The first tab opens **CMD** automatically, in the folder of the active Delphi project (falls back to the IDE working directory if no project is open).
 - Right-click the tab bar → **New Terminal** → choose `CMD`, `WSL` or `PowerShell`.
 - Right-click a tab to **rename** or **remove** it (the default tab cannot be removed/renamed).
+
+### Running an AI agent CLI
+From the prompt in the project folder, call the CLI you already installed, for example:
+
+```text
+agent
+cursor-agent
+opencode
+```
+
+The command resolves from your user PATH. The working directory is the active Delphi project, so the agent starts in the same tree you are editing.
 
 ### Keyboard shortcuts
 | Shortcut | Action |
@@ -81,6 +110,7 @@ The package is split into small, focused units under the `Dinos.Terminal.*` and 
 | `uRegister.pas` | OTA wizard that adds the `DinosTools` menu entry |
 | `WinAPI.ConPty.pas` | Dynamic loading of the ConPTY API (`CreatePseudoConsole`, `ResizePseudoConsole`, ...) with Windows 1809+ build check |
 | `Dinos.Terminal.Pty.pas` | `TConPty` — pipes + pseudo-console + job object (`KILL_ON_JOB_CLOSE`) + `CreateProcess` wiring |
+| `Dinos.Terminal.ProcessEnv.pas` | Fresh user/machine PATH (registry, expanded) packed into a Unicode environment block for `CreateProcess` |
 | `Dinos.Terminal.ConPtyReader.pas` | Background thread that reads output and decodes UTF-8, keeping partial sequences intact |
 | `Dinos.Terminal.ConPtyShell.pas` | `ITerminalProcess` implementation — lifecycle, resize, interrupt, exit events |
 | `Dinos.Terminal.CmdShell.pas` | Pipe-based `ITerminalProcess` fallback when ConPTY is missing or fails to start |

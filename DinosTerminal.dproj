@@ -132,6 +132,7 @@
         <DCCReference Include="uRegister.pas"/>
         <DCCReference Include="WinAPI.ConPty.pas"/>
         <DCCReference Include="Dinos.Terminal.Pty.pas"/>
+        <DCCReference Include="Dinos.Terminal.ProcessEnv.pas"/>
         <DCCReference Include="Dinos.Terminal.ConPtyReader.pas"/>
         <DCCReference Include="Dinos.Terminal.ConPtyShell.pas"/>
         <DCCReference Include="Dinos.Terminal.ScreenBuffer.pas"/>
@@ -171,6 +172,12 @@
                 <DeployFile LocalName="C:\Users\Public\Documents\Embarcadero\Studio\37.0\Bpl\DinosTerminal.bpl" Configuration="Debug" Class="ProjectOutput"/>
                 <DeployFile LocalName="$(BDS)\Redist\osx32\libcgunwind.1.0.dylib" Class="DependencyModule"/>
                 <DeployFile LocalName="$(BDS)\Redist\iossimulator\libpcre.dylib" Class="DependencyModule"/>
+                <DeployFile LocalName="..\..\..\Public\Documents\Embarcadero\Studio\20.0\Bpl\DinosTerminal.bpl" Configuration="Debug" Class="ProjectOutput">
+                    <Platform Name="Win32">
+                        <RemoteName>DinosTerminal.bpl</RemoteName>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
                 <DeployClass Name="AdditionalDebugSymbols">
                     <Platform Name="OSX32">
                         <Operation>1</Operation>
