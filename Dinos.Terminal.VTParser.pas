@@ -126,7 +126,7 @@ begin
             FOSBuffer := '';
           end;
           'D': begin FScreen.LineFeed; FState := vpsNormal; end;
-          'M': begin FScreen.ScrollDown(1); FState := vpsNormal; end;
+          'M': begin FScreen.ReverseIndex; FState := vpsNormal; end;
           'E': begin FScreen.LineFeed; FScreen.CarriageReturn; FState := vpsNormal; end;
           '7': begin FScreen.SaveCursor; FState := vpsNormal; end;
           '8': begin FScreen.RestoreCursor; FState := vpsNormal; end;
@@ -257,7 +257,7 @@ begin
     'K': case GetParam(0, 0) of
            0: FScreen.ClearToEndOfLine;
            1: FScreen.ClearToStartOfLine;
-           2: begin FScreen.CarriageReturn; FScreen.ClearToEndOfLine; end;
+           2: FScreen.ClearEntireLine;
          end;
     'L': FScreen.InsertLines(GetParam(0, 1));
     'M': FScreen.DeleteLines(GetParam(0, 1));
@@ -269,26 +269,33 @@ begin
     'd': FScreen.SetCursorPos(FScreen.CursorX, GetParam(0, 1) - 1);
     'm': HandleSGR;
     'r': FScreen.SetScrollRegion(GetParam(0, 1) - 1, GetParam(1, FScreen.Rows) - 1);
+    's': FScreen.SaveCursor;
+    'u': FScreen.RestoreCursor;
     'h', 'l':
     begin
       if FPrivateMode then
       begin
-        case GetParam(0, 0) of
-          25:
-            if FinalByte = 'l' then
-              FScreen.CursorVisibility := cvHidden
-            else
-              FScreen.CursorVisibility := cvNormal;
-          47, 1047, 1049:
-            if FinalByte = 'h' then
-              FScreen.EnterAltScreen
-            else
-              FScreen.ExitAltScreen;
-          1048:
-            if FinalByte = 'h' then
-              FScreen.SaveCursor;
-          1000, 1002, 1003, 1006:
-            FScreen.MouseEnabled := (FinalByte = 'h');
+        for I := 0 to FParamCount do
+        begin
+          case GetParam(I, 0) of
+            25:
+              if FinalByte = 'l' then
+                FScreen.CursorVisibility := cvHidden
+              else
+                FScreen.CursorVisibility := cvNormal;
+            47, 1047, 1049:
+              if FinalByte = 'h' then
+                FScreen.EnterAltScreen
+              else
+                FScreen.ExitAltScreen;
+            1048:
+              if FinalByte = 'h' then
+                FScreen.SaveCursor
+              else
+                FScreen.RestoreCursor;
+            1000, 1002, 1003, 1006:
+              FScreen.MouseEnabled := (FinalByte = 'h');
+          end;
         end;
       end;
     end;

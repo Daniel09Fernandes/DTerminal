@@ -25,9 +25,7 @@ package DinosTerminal;
 {$IMAGEBASE $400000}
 {$DEFINE DEBUG}
 {$ENDIF IMPLICITBUILDING}
-
-{$DESIGNONLY}
-{$IMPLICITBUILD OFF}
+{$IMPLICITBUILD ON}
 
 requires
   rtl,
@@ -39,6 +37,7 @@ contains
   uRegister in 'uRegister.pas',
   WinAPI.ConPty in 'WinAPI.ConPty.pas',
   Dinos.Terminal.Pty in 'Dinos.Terminal.Pty.pas',
+  Dinos.Terminal.ProcessEnv in 'Dinos.Terminal.ProcessEnv.pas',
   Dinos.Terminal.ConPtyReader in 'Dinos.Terminal.ConPtyReader.pas',
   Dinos.Terminal.ConPtyShell in 'Dinos.Terminal.ConPtyShell.pas',
   Dinos.Terminal.ScreenBuffer in 'Dinos.Terminal.ScreenBuffer.pas',

@@ -11,8 +11,8 @@ type
   TTerminalExitEvent = procedure of object;
 
   ITerminalProcess = interface
-    ['{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}']
-    procedure Start(const ACommand: string; const ASize: TTerminalSize);
+    ['{B2C3D4E5-F6A7-8901-BCDE-F12345678901}']
+    procedure Start(const ACommand, AWorkDir: string; const ASize: TTerminalSize);
     procedure WriteInput(const AData: string);
     procedure SendInterrupt;
     procedure Resize(const ASize: TTerminalSize);
@@ -47,7 +47,7 @@ type
   public
     constructor Create;
     destructor Destroy; override;
-    procedure Start(const ACommand: string; const ASize: TTerminalSize);
+    procedure Start(const ACommand, AWorkDir: string; const ASize: TTerminalSize);
     procedure WriteInput(const AData: string);
     procedure SendInterrupt;
     procedure Resize(const ASize: TTerminalSize);
@@ -109,15 +109,15 @@ begin
   inherited;
 end;
 
-procedure TConPtyShell.Start(const ACommand: string; const ASize: TTerminalSize);
+procedure TConPtyShell.Start(const ACommand, AWorkDir: string; const ASize: TTerminalSize);
 begin
-  Log('TConPtyShell.Start: "' + ACommand + '"');
+  Log('TConPtyShell.Start: "' + ACommand + '" workdir="' + AWorkDir + '"');
   if FPty.IsRunning then
     Exit;
   FTerminating := False;
   FExited := False;
 
-  if not FPty.Start(ACommand, '', ASize) then
+  if not FPty.Start(ACommand, AWorkDir, ASize) then
     raise Exception.Create('ConPTY session failed to start');
 
   Log('TConPtyShell.Start: creating reader, OutputRead=' + IntToStr(FPty.OutputRead));
