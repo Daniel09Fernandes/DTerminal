@@ -179,10 +179,12 @@ begin
 end;
 
 procedure TManangerTerminal.Past1Click(Sender: TObject);
+var
+  Frame: TTerminalFrame;
 begin
   if FTerminals.Count > 0 then
   begin
-    var Frame := FTerminals[FActivePosition];
+    Frame := FTerminals[FActivePosition];
     if Clipboard.HasFormat(CF_TEXT) and Assigned(Frame.Process) and Frame.Process.IsRunning then
       Frame.Process.WriteInput(Clipboard.AsText);
   end;
@@ -325,10 +327,12 @@ begin
 end;
 
 procedure TManangerTerminal.Copy1Click(Sender: TObject);
+var
+  Frame: TTerminalFrame;
 begin
   if (FActivePosition >= 0) and (FActivePosition < FTerminals.Count) then
   begin
-    var Frame := FTerminals[FActivePosition];
+    Frame := FTerminals[FActivePosition];
     if Frame.View.HasSelection then
       Clipboard.AsText := Frame.View.GetSelectedText
     else

@@ -665,6 +665,7 @@ function TScreenBuffer.RowToString(ARow: Integer): string;
 var
   I: Integer;
   LastNonSpace: Integer;
+  Cell: TTerminalCell;
 begin
   if (ARow < 0) or (ARow >= FRows) then Exit('');
   Result := '';
@@ -672,7 +673,7 @@ begin
 
   for I := 0 to FCols - 1 do
   begin
-    var Cell := GetCell(I, ARow);
+    Cell := GetCell(I, ARow);
     if Cell.Ch <> ' ' then
       LastNonSpace := I;
   end;
