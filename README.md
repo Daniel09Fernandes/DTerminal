@@ -49,11 +49,12 @@ DTerminal is compatible with AI agent command-line tools installed for your Wind
 ---
 
 ## 🛠️ Requirements
-
-- **Delphi 10.3 (Rio) or later** (RAD Studio) with VCL and **design-time package** support. Compile and install the package in the **same IDE version** you will use.
+- **Delphi Seatle or later** (RAD Studio) with VCL and **design-time package** support. Compile and install the package in the **same IDE version** you will use.
 - **Windows 10** (build **17763** / 1809 or later) / Windows 11 — ConPTY is used when available. On older Windows, or if ConPTY fails to start, the terminal falls back to redirected pipes (basic CMD/PowerShell still work; full-screen VT apps degrade).
 - **WSL** — only if you want to use the Linux/WSL terminal (optional).
 - **AI agent CLIs** (optional) — install Cursor, OpenCode or another agent CLI on your user PATH if you want to run them from the docked terminal.
+
+<img width="1365" height="721" alt="image" src="https://github.com/user-attachments/assets/18dfe396-8815-4d01-9f67-dd35d41e653a" />
 
 ---
 
