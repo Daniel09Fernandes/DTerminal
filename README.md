@@ -56,6 +56,9 @@ DTerminal is compatible with AI agent command-line tools installed for your Wind
 
 <img width="1365" height="721" alt="image" src="https://github.com/user-attachments/assets/18dfe396-8815-4d01-9f67-dd35d41e653a" />
 
+<img width="1913" height="1038" alt="d10" src="https://github.com/user-attachments/assets/e46e1ec8-055f-4e55-8dcf-2d578ef5eb2c" />
+
+
 ---
 
 ## 📦 Installation
