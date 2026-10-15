@@ -54,8 +54,12 @@ DTerminal is compatible with AI agent command-line tools installed for your Wind
 - **WSL** — only if you want to use the Linux/WSL terminal (optional).
 - **AI agent CLIs** (optional) — install Cursor, OpenCode or another agent CLI on your user PATH if you want to run them from the docked terminal.
 
+Exemple CLI:
+Seatle
+
 <img width="1365" height="721" alt="image" src="https://github.com/user-attachments/assets/18dfe396-8815-4d01-9f67-dd35d41e653a" />
 
+Delphi 12 
 <img width="1913" height="1038" alt="d10" src="https://github.com/user-attachments/assets/e46e1ec8-055f-4e55-8dcf-2d578ef5eb2c" />
 
 
